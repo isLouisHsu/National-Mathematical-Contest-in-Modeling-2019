@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-19 17:55:58
+@LastEditTime: 2019-09-19 17:56:28
 @Update: 
 '''
 import os
@@ -144,6 +144,7 @@ if __name__ == "__main__":
     for i in range(1, 4):
         filename = 'data/file%d.xlsx' % i
         data = readData(filename)
+        print(i, data.shape)
         timestamp, gpsSpeed = data[:, 0], data[:, 1]
         gpsSpeedSeq, cutIndex = cutSpeedSequences(timestamp, gpsSpeed)
         np.save('output/gpsSpeedCutIndex_file%d.npy' % i, cutIndex)
