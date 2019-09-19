@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-19 17:56:28
+@LastEditTime: 2019-09-19 18:08:44
 @Update: 
 '''
 import os
@@ -100,39 +100,42 @@ def calFeaturesOfSequence(seq, speedThresh=SPEEDTHRESH, maxIdle=180):
     """
     # plt.figure(); plt.plot(seq); plt.show()
     
-    isIdle = (seq < speedThresh).astype(np.int) # 是否怠速
-    index = np.r_[1, isIdle[1:] - isIdle[:-1]]  # 负跳变(-1)：从怠速起步
-    idxStart = np.where(index == -1)[0][0]      # 起步时间
-    accelerate = np.r_[0, seq[1:] - seq[:-1]]   # 加速度(m/s)
+    isIdle = (seq < speedThresh).astype(np.int)     # 是否怠速
+    index = np.r_[1, isIdle[1:] - isIdle[:-1]]      # 负跳变(-1)：从怠速起步
+    idxStart = np.where(index == -1)[0][0]          # 起步时间
+
+    if idxStart > 180: seq = seq[index - maxIdle: ] # 剪裁速度值序列
+
+    accelerate = np.r_[0, seq[1:] - seq[:-1]]       # 加速度(m/s)
     accelerate = accelerate[idxStart:]
 
-    seq_   = seq / 3.6                          # m/s
+    seq_   = seq / 3.6                              # m/s
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
 
     feature = []
-    feature += [n_sec]                          # 时长(s)
-    feature += [n_dist]                         # 距离(m)
+    feature += [n_sec]                              # 时长(s)
+    feature += [n_dist]                             # 距离(m)
     
-    feature += [idxStart / n_sec]               # 怠速时间比(%)
+    feature += [idxStart / n_sec]                   # 怠速时间比(%)
 
     feature += [np.where(accelerate > 0.)[0].shape[0]]  # 加速时间(s)
     feature += [np.where(accelerate < 0.)[0].shape[0]]  # 减速时间(s)
     
-    feature += [seq.max()]                      # 峰值速度(m/s)
-    feature += [n_dist / n_sec]                 # 平均运行速度(m/s)
-    feature += [n_dist / (n_sec - idxStart)]    # 平均速度(m/s)
-    feature += [seq.std()]                      # 速度标准差
+    feature += [seq.max()]                          # 峰值速度(m/s)
+    feature += [n_dist / n_sec]                     # 平均运行速度(m/s)
+    feature += [n_dist / (n_sec - idxStart)]        # 平均速度(m/s)
+    feature += [seq.std()]                          # 速度标准差
 
-    feature += [accelerate.max()]               # 峰值加速度
-    feature += [accelerate.min()]               # 峰值减速度
+    feature += [accelerate.max()]                   # 峰值加速度
+    feature += [accelerate.min()]                   # 峰值减速度
 
     temp = accelerate[accelerate > 0.]
-    feature += [temp.mean()]                    # 平均加速度
-    feature += [temp.std()]                     # 加速度标准差
+    feature += [temp.mean()]                        # 平均加速度
+    feature += [temp.std()]                         # 加速度标准差
     temp = accelerate[accelerate < 0.]
-    feature += [temp.mean()]                    # 平均减速度
-    feature += [temp.std()]                     # 减速度标准差
+    feature += [temp.mean()]                        # 平均减速度
+    feature += [temp.std()]                         # 减速度标准差
     
     feature = np.array(feature)
     return feature
