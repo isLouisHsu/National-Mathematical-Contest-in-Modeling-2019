@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-19 18:08:44
+@LastEditTime: 2019-09-19 18:34:37
 @Update: 
 '''
 import os
@@ -104,7 +104,7 @@ def calFeaturesOfSequence(seq, speedThresh=SPEEDTHRESH, maxIdle=180):
     index = np.r_[1, isIdle[1:] - isIdle[:-1]]      # 负跳变(-1)：从怠速起步
     idxStart = np.where(index == -1)[0][0]          # 起步时间
 
-    if idxStart > 180: seq = seq[index - maxIdle: ] # 剪裁速度值序列
+    if idxStart > 180: seq = seq[idxStart - maxIdle: ] # 剪裁速度值序列
 
     accelerate = np.r_[0, seq[1:] - seq[:-1]]       # 加速度(m/s)
     accelerate = accelerate[idxStart:]
