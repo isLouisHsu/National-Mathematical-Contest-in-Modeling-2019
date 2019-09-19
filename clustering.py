@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-19 19:45:22
+@LastEditTime: 2019-09-19 20:02:09
 @Update: 
 '''
 import os
@@ -43,6 +43,7 @@ plt.plot([pipline.named_steps.pca.explained_variance_ratio_[:i+1].sum() for i in
 plt.xlabel("Number of Components")
 plt.ylabel("Sum of Ratio of Explained Variance")
 plt.grid()
+plt.savefig("images/pca.png")
 plt.show()
 
 # ------------------------------------------------------------------
@@ -80,9 +81,10 @@ for n_clusters in range(3, 15):
     scores += [pipline.score(speedFeats)]
 
 plt.figure()
-plt.title("K-means, Scores")
+plt.title("K-means' Scores(n_components=%d)" % n_components)
 plt.plot(scores)
 plt.xlabel("Number of Clusters")
 plt.ylabel("Score")
 plt.grid()
+plt.savefig("images/kmeans.png")
 plt.show()
