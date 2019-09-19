@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-19 17:37:37
+@LastEditTime: 2019-09-19 17:55:58
 @Update: 
 '''
 import os
@@ -89,7 +89,7 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=SPEEDTHRESH):
     # speedSeq[speedSeq < speedThresh] = 0.                                           # 小于阈值作怠速处理
     speedSequences = list(map(lambda x: speedSeq[x[0]: x[1]], cutIndex))
 
-    return speedSequences
+    return speedSequences, cutIndex
 
 def calFeaturesOfSequence(seq, speedThresh=SPEEDTHRESH, maxIdle=180):
     """
@@ -139,15 +139,16 @@ def calFeaturesOfSequence(seq, speedThresh=SPEEDTHRESH, maxIdle=180):
 
 if __name__ == "__main__":
 
-    # filename = '../data/temp.xlsx'
+    # filename = 'data/temp.xlsx'
 
     for i in range(1, 4):
-        filename = '../data/file%d.xlsx' % i
+        filename = 'data/file%d.xlsx' % i
         data = readData(filename)
         timestamp, gpsSpeed = data[:, 0], data[:, 1]
-        gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
+        gpsSpeedSeq, cutIndex = cutSpeedSequences(timestamp, gpsSpeed)
+        np.save('output/gpsSpeedCutIndex_file%d.npy' % i, cutIndex)
         gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
-        np.save('../output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
+        np.save('output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
     
     ## 小波变换去噪
     # speedSeqDwt = dwtDecompose(speedSeq, dwtThresh)
