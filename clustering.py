@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-19 20:02:09
+@LastEditTime: 2019-09-19 21:21:44
 @Update: 
 '''
 import os
@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.model_selection import GridSearchCV
+from sklearn.externals import joblib
 
 speedFeats = []
 for i in range(1, 4):
@@ -25,6 +26,7 @@ for i in range(1, 4):
     speedFeats += [speedFeat]
 speedFeats = np.concatenate(speedFeats, axis=0)
 n_samples, n_features = speedFeats.shape
+print("Shape of samples: ", speedFeats.shape)
 
 # ------------------------------------------------------------------
 steps = [('scaler', StandardScaler()), ('pca', PCA(n_components=n_features))]
@@ -34,7 +36,7 @@ pipline.fit(speedFeats)
 plt.figure(figsize=(8, 4))
 plt.title('Explained Variance(Eigen Values) Ratio of PCA')
 plt.subplot(121)
-plt.plot(pipline.named_steps.pca.explained_variance_ratio_)
+plt.bar(list(range(n_features)), pipline.named_steps.pca.explained_variance_ratio_)
 plt.xlabel("Number of Components")
 plt.ylabel("Ratio of Explained Variance")
 plt.grid()
@@ -75,16 +77,31 @@ steps = [
 pipline = Pipeline(steps)
 
 scores = []
-for n_clusters in range(3, 15):
+n_clusters_list = list(range(3, 7))
+for n_clusters in n_clusters_list:
     pipline.set_params(kmeans__n_clusters=n_clusters)
     pipline.fit(speedFeats)
     scores += [pipline.score(speedFeats)]
 
 plt.figure()
 plt.title("K-means' Scores(n_components=%d)" % n_components)
-plt.plot(scores)
+plt.plot(n_clusters_list, scores)
 plt.xlabel("Number of Clusters")
 plt.ylabel("Score")
 plt.grid()
 plt.savefig("images/kmeans.png")
 plt.show()
+
+# ------------------------------------------------------------------
+n_clusters = int(input("Please enter the number of clusters: "))
+steps = [
+        ('scaler', StandardScaler()), 
+        ('pca', PCA(n_components=n_components)), 
+        ('kmeans', KMeans(n_clusters=n_clusters)),
+    ]
+pipline = Pipeline(steps)
+pipline.fit(speedFeats)
+y = pipline.predict(speedFeats)
+np.save("output/seqLabels_pca%d_kmeans%d.npy" % (n_components, n_clusters), y)
+
+joblib.dump(pipline, "output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))

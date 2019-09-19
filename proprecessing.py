@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-19 20:05:39
+@LastEditTime: 2019-09-19 21:25:07
 @Update: 
 '''
 import os
@@ -18,7 +18,7 @@ import pywt
 
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
 
-SPEEDTHRESH = 2.
+IDLETHRESH = 2.
 
 def timestamp2unix(timestamp):
     """
@@ -58,7 +58,7 @@ def getSpeedSequenceFromLongitudeAndLatitude(longitude, latitude):
     speedSeq  = np.r_[0, speedSeq]
     return speedSeq
 
-def cutSpeedSequences(timestamp, speedSeq, speedThresh=SPEEDTHRESH):
+def cutSpeedSequences(timestamp, speedSeq, speedThresh=IDLETHRESH):
     """
     Params:
         timestamp: {ndarray(N)}
@@ -89,17 +89,15 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=SPEEDTHRESH):
     # speedSeq[speedSeq < speedThresh] = 0.                                           # 小于阈值作怠速处理
     speedSequences = list(map(lambda x: speedSeq[x[0]: x[1]], cutIndex))
 
-    return speedSequences, cutIndex
+    return speedSequences
 
-def calFeaturesOfSequence(seq, speedThresh=SPEEDTHRESH, maxIdle=180):
+def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     """
     Params:
         seq: {ndarray(n_length)}
     Notes:
     -   
     """
-    # plt.figure(); plt.plot(seq); plt.show()
-    
     isIdle = (seq < speedThresh).astype(np.int)     # 是否怠速
     index = np.r_[1, isIdle[1:] - isIdle[:-1]]      # 负跳变(-1)：从怠速起步
     idxStart = np.where(index == -1)[0][0]          # 起步时间
@@ -108,12 +106,12 @@ def calFeaturesOfSequence(seq, speedThresh=SPEEDTHRESH, maxIdle=180):
         seq = seq[maxIdle: ]             
         idxStart -= maxIdle
 
-    accelerate = np.r_[0, seq[1:] - seq[:-1]]       # 加速度(m/s)
-    accelerate = accelerate[idxStart:]
-
-    seq_   = seq / 3.6                              # m/s
+    seq    = seq / 3.6                              # m/s
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
+
+    accelerate = np.r_[0, seq[1:] - seq[:-1]]       # 加速度(m/s)
+    accelerate = accelerate[idxStart:]
 
     feature = []
     feature += [n_sec]                              # 时长(s)
@@ -147,12 +145,19 @@ if __name__ == "__main__":
     # filename = 'data/temp.xlsx'
 
     for i in range(1, 4):
+        
         filename = 'data/file%d.xlsx' % i
         data = readData(filename)
         print(i, data.shape)
+        
         timestamp, gpsSpeed = data[:, 0], data[:, 1]
-        gpsSpeedSeq, cutIndex = cutSpeedSequences(timestamp, gpsSpeed)
-        np.save('output/gpsSpeedCutIndex_file%d.npy' % i, cutIndex)
+        # gpsSpeed = dwtDecompose(gpsSpeed, 2)
+
+        gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
+        np.save('output/gpsSpeedSequences_file%d.npy' % i, gpsSpeedSeq)
+        print("Number of sequences: %d, Mean of sequences' length: %f" 
+                % (len(gpsSpeedSeq), gpsSpeed.shape[0] / len(gpsSpeedSeq)))
+
         gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
         np.save('output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
     
