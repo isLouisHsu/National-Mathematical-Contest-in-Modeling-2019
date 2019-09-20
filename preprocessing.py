@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-19 21:25:07
+@LastEditTime: 2019-09-20 10:30:51
 @Update: 
 '''
 import os
@@ -102,7 +102,7 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     index = np.r_[1, isIdle[1:] - isIdle[:-1]]      # 负跳变(-1)：从怠速起步
     idxStart = np.where(index == -1)[0][0]          # 起步时间
 
-    if idxStart > maxIdle:                          # 剪裁速度值序列
+    if idxStart > maxIdle:                          # 怠速时间超过180s，剪裁速度值序列
         seq = seq[maxIdle: ]             
         idxStart -= maxIdle
 
@@ -114,18 +114,13 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     accelerate = accelerate[idxStart:]
 
     feature = []
-    feature += [n_sec]                              # 时长(s)
-    feature += [n_dist]                             # 距离(m)
     
-    feature += [idxStart / n_sec]                   # 怠速时间比(%)
+    feature += [seq.max()]                          # 峰值速度(m/s)
+    feature += [n_dist / (n_sec - idxStart)]        # 平均速度(m/s)
+    feature += [seq.std()]                          # 速度标准差
 
     feature += [np.where(accelerate > 0.)[0].shape[0]]  # 加速时间(s)
     feature += [np.where(accelerate < 0.)[0].shape[0]]  # 减速时间(s)
-    
-    feature += [seq.max()]                          # 峰值速度(m/s)
-    feature += [n_dist / n_sec]                     # 平均运行速度(m/s)
-    feature += [n_dist / (n_sec - idxStart)]        # 平均速度(m/s)
-    feature += [seq.std()]                          # 速度标准差
 
     feature += [accelerate.max()]                   # 峰值加速度
     feature += [accelerate.min()]                   # 峰值减速度
@@ -137,6 +132,12 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     feature += [temp.mean()]                        # 平均减速度
     feature += [temp.std()]                         # 减速度标准差
     
+    feature += [n_sec - idxStart]                   # 运行时间(s)
+    # feature += [n_sec]                              # 时长(s)
+    # feature += [n_dist]                             # 距离(m)
+    feature += [idxStart / n_sec]                   # 怠速时间比(%)
+    feature += [n_dist / n_sec]                     # 平均运行速度(m/s)
+    
     feature = np.array(feature)
     return feature
 
@@ -144,6 +145,9 @@ if __name__ == "__main__":
 
     # filename = 'data/temp.xlsx'
 
+    plt.figure()
+    plt.title("Histogram of Speed")
+    
     for i in range(1, 4):
         
         filename = 'data/file%d.xlsx' % i
@@ -151,16 +155,29 @@ if __name__ == "__main__":
         print(i, data.shape)
         
         timestamp, gpsSpeed = data[:, 0], data[:, 1]
+
+        plt.subplot(3, 1, i)
+        plt.xlabel("km/h")
+        plt.ylabel("Number")
+        plt.hist(gpsSpeed, edgecolor='white')
+
         # gpsSpeed = dwtDecompose(gpsSpeed, 2)
 
-        gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
-        np.save('output/gpsSpeedSequences_file%d.npy' % i, gpsSpeedSeq)
+        print("Cutting sequences...")
+        if os.path.exists('output/gpsSpeedSequences_file%d.npy' % i):
+            gpsSpeedSeq = np.load('output/gpsSpeedSequences_file%d.npy' % i)
+        else:
+            gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
+            np.save('output/gpsSpeedSequences_file%d.npy' % i, gpsSpeedSeq)
         print("Number of sequences: %d, Mean of sequences' length: %f" 
                 % (len(gpsSpeedSeq), gpsSpeed.shape[0] / len(gpsSpeedSeq)))
 
+        print("Calculating features...")
         gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
         np.save('output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
     
+    plt.savefig("images/gpsSpeed.png")
+    plt.show()
     ## 小波变换去噪
     # speedSeqDwt = dwtDecompose(speedSeq, dwtThresh)
     # plt.figure(); plt.plot(speedSeq); plt.figure(); plt.plot(speedSeqDwt); plt.show()
