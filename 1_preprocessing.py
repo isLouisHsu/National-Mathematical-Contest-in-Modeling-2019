@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 18:09:45
+@LastEditTime: 2019-09-20 20:21:54
 @Update: 
 '''
 import os
@@ -18,11 +18,7 @@ import pywt
 
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
 
-IDLETHRESH = 2.
-MAXSPEEDTHRESH = 5.
-MAXACCABS  = 17
-MINTIME    = 20
-MINRUNTIME = 3
+IDLETHRESH = 1.
 
 def timestamp2unix(timestamp):
     """
@@ -129,8 +125,8 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     feature += [n_sec - idxStart]                       # 3, 运行时间(s)
     feature += [n_sec]                                  # 4, 时长(s)
 
-    feature += [np.where(accelerate > 0.)[0].shape[0]]  # 5, 加速时间(s)
-    feature += [np.where(accelerate < 0.)[0].shape[0]]  # 6, 减速时间(s)
+    feature += [np.where(accelerate > 0.)[0].shape[0] / n_sec]  # 5, 加速时间百分比(%)
+    feature += [np.where(accelerate < 0.)[0].shape[0] / n_sec]  # 6, 减速时间百分比(%)
 
     feature += [accelerate.max()]                       # 7, 峰值加速度
     feature += [accelerate.min()]                       # 8, 峰值减速度
@@ -150,12 +146,17 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
         feature += [temp.mean()]                        # 11, 平均减速度
         feature += [temp.std()]                         # 12, 减速度标准差
         
-    feature += [n_dist]                                 # 距离(m)
-    feature += [idxStart / n_sec]                       # 13, 怠速时间比(%)
-    feature += [n_dist / n_sec]                         # 14, 平均运行速度(m/s)
+    # feature += [n_dist]                                 # 13, 距离(m)
+    feature += [idxStart / n_sec]                       # 14, 怠速时间比(%)
+    feature += [n_dist / n_sec]                         # 15, 平均运行速度(m/s)
     
     feature = np.array(feature)
     return feature
+
+MAXSPEEDTHRESH = 5.
+MAXACCABS  = 17
+MINTIME    = 15
+MINRUNTIME = 4
 
 if __name__ == "__main__":
 
@@ -193,13 +194,13 @@ if __name__ == "__main__":
         gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
         
         # --------------------------------------
-        ## 删除峰值速度小于阈值的序列
-        n_samples = gpsSpeedFeat.shape[0]
-        print("Deleting some sequences...")
-        index = gpsSpeedFeat[:, 0] > MAXSPEEDTHRESH
-        gpsSpeedFeat = gpsSpeedFeat[index]
-        gpsSpeedSeq  = gpsSpeedSeq [index]
-        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+        # ## 删除峰值速度小于阈值的序列
+        # n_samples = gpsSpeedFeat.shape[0]
+        # print("Deleting some sequences...")
+        # index = gpsSpeedFeat[:, 0] > MAXSPEEDTHRESH
+        # gpsSpeedFeat = gpsSpeedFeat[index]
+        # gpsSpeedSeq  = gpsSpeedSeq [index]
+        # print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
 
         ## 删除加速度大于阈值的序列
         n_samples = gpsSpeedFeat.shape[0]

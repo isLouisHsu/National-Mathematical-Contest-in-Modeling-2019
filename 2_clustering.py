@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-20 17:52:54
+@LastEditTime: 2019-09-20 19:23:53
 @Update: 
 '''
 import os
@@ -77,8 +77,8 @@ plt.savefig("images/2_kmeans.png")
 plt.show()
 
 # ------------------------------------------------------------------
-n_clusters = input("Please enter the number of clusters  (default 5): ")
-n_clusters = 5 if n_clusters == '' else int(n_clusters)
+n_clusters = input("Please enter the number of clusters  (default 8): ")
+n_clusters = 8 if n_clusters == '' else int(n_clusters)
 steps = [
         ('scaler', SCALAR()), 
         ('pca', PCA(n_components=n_components)), 

@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 18:06:48
+@LastEditTime: 2019-09-20 20:45:31
 @Update: 
 '''
 import os
@@ -18,8 +18,8 @@ from sklearn.mixture import GaussianMixture
 
 n_components = input("Please enter the number of components(default 6): ")
 n_components = 6 if n_components == '' else int(n_components)
-n_clusters   = input("Please enter the number of clusters  (default 5): ")
-n_clusters   = 5 if n_clusters == '' else int(n_clusters)
+n_clusters   = input("Please enter the number of clusters  (default 8): ")
+n_clusters   = 8 if n_clusters == '' else int(n_clusters)
 pipeline = joblib.load("output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 
 sequences = []
@@ -49,34 +49,50 @@ for i in range(n_classes):
 plt.savefig("images/3_sequences_kmeans.png")
 
 # ------------------------------------------------------------
-## 统计总的序列长度直方图、各类别序列长度直方图
-index = 0
-chosenFeat = features[:, index]
+## 查看峰值速度大于30的运动学片段样例
+index = features[:, 0] > 30
+subseq = sequences[index]; subY = y[index]
+n_sequences = subseq.shape[0]
+nh = int(np.ceil(np.sqrt(n_sequences))); nw = n_sequences // nh + 1
+fig = plt.figure(figsize=(nw * 3, nh * 2))
+for i in range(n_sequences):
+    ax = fig.add_subplot(nw, nh, i // nh * nw + i % nh + 1)
+    if i < subseq.shape[0]:
+        ax.plot(subseq[i], label = 'class %d' % subY[i])
+    ax.legend()
+plt.savefig("images/3_maxSpeed_geq_30_sequences.png")
+
+# ------------------------------------------------------------
+## 构造统计量，统计其长度直方图、与各类别的长度直方图
+def getStatistic(features):
+    return features[:, 0]
+
+statistic = getStatistic(features)
 plt.figure()
 plt.title("Chosen Feature - all")
-plt.xlabel("speed(km/h)")
+plt.xlabel("statistic")
 plt.ylabel("Number")
-plt.xlim(0, chosenFeat.max())
+plt.xlim(0, statistic.max())
 # plt.ylim(0, 350)
-n, bins, patches = plt.hist(chosenFeat, bins=int(chosenFeat.max() - chosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
+n, bins, patches = plt.hist(statistic, bins=int(statistic.max() - statistic.min()) + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/3_feat_hist.png")
 
 plt.figure(figsize=(5, 10))
 plt.title("Chosen Feature - classes")
 for i in range(n_classes):
-    subChosenFeat = features[y == i][:, index]
+    subStatistic = getStatistic(features[y == i])
     plt.subplot(n_classes, 1, i + 1)
     if i == n_classes - 1:
-        plt.xlabel("speed(km/h)")
+        plt.xlabel("statistic")
     plt.ylabel("Number - class %d" % i)
-    plt.xlim(0, chosenFeat.max())
-    plt.ylim(0, 400)
-    n, bins, patches = plt.hist(subChosenFeat, bins=int(subChosenFeat.max() - subChosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
+    plt.xlim(0, statistic.max())
+    # plt.ylim(0, 250)
+    n, bins, patches = plt.hist(subStatistic, bins=int(subStatistic.max() - subStatistic.min()) + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/3_feat_hist_subseq.png")
 
 # ------------------------------------------------------------
 ## 删除两种多余的运动学片段，重新计算标签
-deleteClassIndex = [1, 2]   # TODO:
+deleteClassIndex = [3, 5, 6, 7]   # TODO:
 index = np.ones(features.shape[0], dtype=np.bool)
 for idx in deleteClassIndex:
     idx = y != idx
@@ -90,17 +106,18 @@ n_classes = len(set(y))
 # ------------------------------------------------------------
 ## 绘制高斯混合模型曲线
 gmm = GaussianMixture(n_components=n_classes)
-gmm.fit(chosenFeat.reshape(-1, 1))
-n, bins = np.histogram(chosenFeat, bins=int(chosenFeat.max() - chosenFeat.min()) + 1)
+gmm.fit(statistic.reshape(-1, 1))
+n, bins = np.histogram(statistic, bins=int(statistic.max() - statistic.min()) + 1)
+bins = np.r_[0, bins]
 plt.figure()
 plt.title("Chosen Feature - GMM")
-plt.xlabel("speed(km/h)")
+plt.xlabel("statistic")
 # plt.ylim(0, 0.02)
 plt.ylabel("P")
 for i in range(n_classes):
     mu, sigma = gmm.means_[i, 0], gmm.covariances_[i, 0]
     y_ = np.exp(-0.5*np.square((bins-mu)/sigma))/(np.sqrt(2*np.pi)*sigma)
-    plt.plot(bins, y_ * gmm.weights_[i], label="mu=%.2f sigma=%.2f" % (mu, sigma))
+    plt.plot(bins, y_ * gmm.weights_[i], label="class%d, mu=%.2f, sigma=%.2f" % (i, mu, sigma))
     plt.grid(); plt.legend()
 plt.savefig("images/3_feat_hist_GMM.png")
 plt.show()

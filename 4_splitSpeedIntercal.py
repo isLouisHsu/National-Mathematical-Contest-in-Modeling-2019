@@ -6,11 +6,12 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-20 18:05:34
+@LastEditTime: 2019-09-20 21:04:44
 @Update: 
 '''
 import os
 import numpy as np
+from matplotlib import mlab
 from matplotlib import pyplot as plt
 
 sequences = []
@@ -30,16 +31,11 @@ features  = features [index]
 
 # ------------------------------------------------------------------------------------
 totalTime = 1200.
-featLandmarks = [12, 25]   # TODO:
+featLandmarks = [7, 15]   # TODO:
 sumRunTime = np.sum(features[:, 3])                         # 运行时间(s)
 
-## 删除运行时间大于`totalTime`的序列
-index = features[:, 3] <= totalTime
-sequences = sequences[index]
-features  = features [index]
-
 # ------------------------------------------------------------------------------------
-fig = plt.figure(figsize=(12, 12)); plt.title("Runing Time(s)")
+fig = plt.figure(figsize=(15, 12)); plt.title("Runing Time(s)")
 
 T = []; t = []; N = []
 for i in range(len(featLandmarks) + 1):
@@ -57,8 +53,9 @@ for i in range(len(featLandmarks) + 1):
     subFeature  = features [index]
 
     n, bins = np.histogram(subFeature[:, 3], bins=100)
+    bins = (bins[1:] + bins[:-1]) / 2
     freq = n / n.sum()
-    cumFreq = [0] + [np.sum(freq[:i+1]) for i in range(freq.shape[0])]
+    cumFreq = [np.sum(freq[:i+1]) for i in range(freq.shape[0])]
     
     Tk = subFeature[:, 3].sum() / sumRunTime * totalTime    # 当前速度区间，运动片段运行时长之和 / 所有运动片段运行时长之和
     tk = subFeature[:, 3].mean()                            # 当前速度区间，平均运行时长
@@ -66,18 +63,24 @@ for i in range(len(featLandmarks) + 1):
     T += [Tk]; t += [tk]; N += [Nk]
     
     ax = fig.add_subplot(len(featLandmarks) + 1, 2, i * 2 + 1)
-    ax.set_xlabel("time(s)"); ax.set_xticks(bins)
+    ax.set_xlabel("time(s)")
+    ax.set_xticks(bins[::10])
     ax.set_ylabel("frequency(%)")
-    ax.bar(list(range(freq.shape[0])), freq)
+    ax.bar(bins, freq)
+    # ax.bar(bins, n)
     # ax.set_xlim(0, 20)
     ax = fig.add_subplot(len(featLandmarks) + 1, 2, i * 2 + 2)
-    ax.set_xlabel("time(s)"); ax.set_xticks(bins)
+    ax.set_xlabel("time(s)")
+    ax.set_xticks(bins[::10])
     ax.set_ylabel("cumulative frequency(%)")
-    for i in range(Nk): ax.hlines(i / Nk, 0, len(cumFreq), 'r', 'dashed')
-    # ax.vlines(tk, 0, 1, 'r', 'dotted')
-    ax.plot(cumFreq)
+    ax.plot(np.r_[0., bins], np.r_[0, cumFreq])
     ax.grid()
-
+    
+    if Nk == 0: continue
+    g = 1. / Nk; r = np.array([i*g for i in range(Nk)]); r = np.r_[r, 1.]; r = (r[1:] + r[:-1]) / 2
+    for i in range(r.shape[0]): ax.hlines(r[i], 0, bins.max(), 'r', 'dashed')
+    ax.vlines(tk, 0, 1, 'r', 'dashed')
+    
 print(T, t, N)
 
 plt.savefig("images/4_running_time.png")
