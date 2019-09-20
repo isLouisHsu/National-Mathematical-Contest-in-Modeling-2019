@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 20:45:31
+@LastEditTime: 2019-09-20 21:23:01
 @Update: 
 '''
 import os
@@ -15,6 +15,8 @@ from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.externals import joblib
 from sklearn.mixture import GaussianMixture
+
+from params import deleteClassIndex
 
 n_components = input("Please enter the number of components(default 6): ")
 n_components = 6 if n_components == '' else int(n_components)
@@ -65,12 +67,12 @@ plt.savefig("images/3_maxSpeed_geq_30_sequences.png")
 # ------------------------------------------------------------
 ## 构造统计量，统计其长度直方图、与各类别的长度直方图
 def getStatistic(features):
-    return features[:, 0]
+    return features[:, 1]
 
 statistic = getStatistic(features)
 plt.figure()
 plt.title("Chosen Feature - all")
-plt.xlabel("statistic")
+plt.xlabel("feature value")
 plt.ylabel("Number")
 plt.xlim(0, statistic.max())
 # plt.ylim(0, 350)
@@ -83,7 +85,7 @@ for i in range(n_classes):
     subStatistic = getStatistic(features[y == i])
     plt.subplot(n_classes, 1, i + 1)
     if i == n_classes - 1:
-        plt.xlabel("statistic")
+        plt.xlabel("feature value")
     plt.ylabel("Number - class %d" % i)
     plt.xlim(0, statistic.max())
     # plt.ylim(0, 250)
@@ -91,8 +93,7 @@ for i in range(n_classes):
 plt.savefig("images/3_feat_hist_subseq.png")
 
 # ------------------------------------------------------------
-## 删除两种多余的运动学片段，重新计算标签
-deleteClassIndex = [3, 5, 6, 7]   # TODO:
+## 删除部分类别的运动学片段，重新计算标签
 index = np.ones(features.shape[0], dtype=np.bool)
 for idx in deleteClassIndex:
     idx = y != idx
@@ -103,7 +104,6 @@ pipeline.set_params(kmeans__n_clusters=n_clusters - len(deleteClassIndex))
 y = pipeline.fit_predict(features)
 n_classes = len(set(y))
 
-# ------------------------------------------------------------
 ## 绘制高斯混合模型曲线
 gmm = GaussianMixture(n_components=n_classes)
 gmm.fit(statistic.reshape(-1, 1))
@@ -111,7 +111,7 @@ n, bins = np.histogram(statistic, bins=int(statistic.max() - statistic.min()) + 
 bins = np.r_[0, bins]
 plt.figure()
 plt.title("Chosen Feature - GMM")
-plt.xlabel("statistic")
+plt.xlabel("feature value")
 # plt.ylim(0, 0.02)
 plt.ylabel("P")
 for i in range(n_classes):

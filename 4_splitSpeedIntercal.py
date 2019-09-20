@@ -6,13 +6,16 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-20 21:04:44
+@LastEditTime: 2019-09-20 21:28:57
 @Update: 
 '''
 import os
 import numpy as np
 from matplotlib import mlab
 from matplotlib import pyplot as plt
+from sklearn.externals import joblib
+
+from params import deleteClassIndex, featLandmarks
 
 sequences = []
 features = []
@@ -23,15 +26,24 @@ sequences = np.concatenate(sequences, axis=0)
 features  = np.concatenate(features,  axis=0)
 
 # ------------------------------------------------------------------------------------
-index = 0
-feat      = features[:, index]                              # 最大速度(m/s)
-index     = np.argsort(feat)
+## 删除异常类别的样本
+n_components = input("Please enter the number of components(default 6): ")
+n_components = 6 if n_components == '' else int(n_components)
+n_clusters   = input("Please enter the number of clusters  (default 8): ")
+n_clusters   = 8 if n_clusters == '' else int(n_clusters)
+pipeline = joblib.load("output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
+y = pipeline.predict(features)
+index = np.ones(features.shape[0], dtype=np.bool)
+for idx in deleteClassIndex:
+    idx = y != idx
+    index = np.bitwise_and(index, idx)
 sequences = sequences[index]
 features  = features [index]
 
 # ------------------------------------------------------------------------------------
+index = 0
+feat      = features[:, index]                              # 最大速度(m/s)
 totalTime = 1200.
-featLandmarks = [7, 15]   # TODO:
 sumRunTime = np.sum(features[:, 3])                         # 运行时间(s)
 
 # ------------------------------------------------------------------------------------

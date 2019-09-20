@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 20:21:54
+@LastEditTime: 2019-09-20 21:25:28
 @Update: 
 '''
 import os
@@ -16,9 +16,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pywt
 
+from params import IDLETHRESH, MAXSPEEDTHRESH, MAXACCABS, MINTIME, MINRUNTIME
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
-
-IDLETHRESH = 1.
 
 def timestamp2unix(timestamp):
     """
@@ -152,11 +151,6 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     
     feature = np.array(feature)
     return feature
-
-MAXSPEEDTHRESH = 5.
-MAXACCABS  = 17
-MINTIME    = 15
-MINRUNTIME = 4
 
 if __name__ == "__main__":
 
