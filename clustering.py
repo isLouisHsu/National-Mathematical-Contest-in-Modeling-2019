@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-19 21:21:44
+@LastEditTime: 2019-09-20 08:31:12
 @Update: 
 '''
 import os
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from sklearn.model_selection import GridSearchCV
 from sklearn.externals import joblib
 
@@ -49,26 +49,8 @@ plt.savefig("images/pca.png")
 plt.show()
 
 # ------------------------------------------------------------------
-# steps = [
-#         ('scaler', StandardScaler()), 
-#         ('pca', PCA()), 
-#         ('kmeans', KMeans()),
-#     ]
-# pipline = Pipeline(steps)
-
-# parameters = {
-#     'pca__n_components': [_ for _ in range(6, n_features)], 
-#     'kmeans__n_clusters': [_ for _ in range(3, 12)]
-#     }
-# searcher = GridSearchCV(pipline, parameters, cv=5)
-# searcher.fit(speedFeats)
-
-# print(searcher.cv_results_)
-# print(searcher.best_estimator_)
-# print(searcher.best_params_)
-
-# ------------------------------------------------------------------
-n_components = int(input("Please enter the number of components: "))
+n_components = input("Please enter the number of components(default 5): ")
+n_components = 6 if n_components == '' else int(n_components)
 steps = [
         ('scaler', StandardScaler()), 
         ('pca', PCA(n_components=n_components)), 
@@ -93,7 +75,8 @@ plt.savefig("images/kmeans.png")
 plt.show()
 
 # ------------------------------------------------------------------
-n_clusters = int(input("Please enter the number of clusters: "))
+n_clusters = input("Please enter the number of clusters(default 5): ")
+n_clusters = 5 if n_clusters == '' else int(n_clusters)
 steps = [
         ('scaler', StandardScaler()), 
         ('pca', PCA(n_components=n_components)), 
