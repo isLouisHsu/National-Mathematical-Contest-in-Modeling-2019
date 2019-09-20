@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 15:09:18
+@LastEditTime: 2019-09-20 15:55:18
 @Update: 
 '''
 import os
@@ -43,7 +43,7 @@ for i in range(n_classes):
             ax.set_ylabel("km/h")
         if j == 0:
             ax.set_title("class %d" % (i))
-plt.savefig("images/4_sequences_kmeans.png")
+plt.savefig("images/3_sequences_kmeans.png")
 
 # ------------------------------------------------------------
 ## 统计总的序列长度直方图、各类别序列长度直方图
@@ -55,7 +55,7 @@ plt.ylabel("Number")
 plt.xlim(0, chosenFeat.max())
 plt.ylim(0, 400)
 n, bins, patches = plt.hist(chosenFeat, bins=int(chosenFeat.max() - chosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
-plt.savefig("images/4_feat_hist.png")
+plt.savefig("images/3_feat_hist.png")
 
 plt.figure(figsize=(5, 10))
 plt.title("Chosen Feature - classes")
@@ -66,11 +66,12 @@ for i in range(n_classes):
     plt.xlim(0, chosenFeat.max())
     plt.ylim(0, 400)
     n, bins, patches = plt.hist(subChosenFeat, bins=int(subChosenFeat.max() - subChosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
-plt.savefig("images/4_feat_hist_subseq.png")
+plt.savefig("images/3_feat_hist_subseq.png")
 
 # ------------------------------------------------------------
 ## 删除两种多余的运动学片段，重新计算标签
-deleteClassIndex = [3, 4]
+deleteClassIndex = [0, 3]
+# deleteClassIndex = []
 index = np.ones(features.shape[0], dtype=np.bool)
 for idx in deleteClassIndex:
     idx = y != idx
@@ -95,5 +96,5 @@ for i in range(n_components):
     # plt.plot(bins, y_ * gmm.weights_[i], 'b')
     plt.plot(bins, y_ * gmm.weights_[i])
     plt.grid()
-plt.savefig("images/4_feat_hist_GMM.png")
+plt.savefig("images/3_feat_hist_GMM.png")
 plt.show()

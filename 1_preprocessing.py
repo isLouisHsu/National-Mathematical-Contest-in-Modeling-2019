@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 15:08:30
+@LastEditTime: 2019-09-20 15:48:31
 @Update: 
 '''
 import os
@@ -74,7 +74,8 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=IDLETHRESH):
         numCycle  = int(timestamp[index] - timestamp[index - 1])
         padArray  = timestamp[index - 1] + np.arange(numCycle - 1, dtype=np.float) + 1
         timestamp = np.r_[timestamp[:index], padArray, timestamp[index:]]           # 补全时间戳
-        padArray  = np.full(numCycle, 0.5 * (speedSeq[index - 1] + speedSeq[index]))
+        # padArray  = np.full(numCycle, 0.5 * (speedSeq[index - 1] + speedSeq[index]))  # 填充两端均值
+        padArray  = np.full(numCycle, 0)                                            # 填充`0`
         speedSeq  = np.r_[speedSeq[:index], padArray, speedSeq[index:]]             # 补全速度序列
 
     ## 类型2：加减速异常数据 TODO:
@@ -106,7 +107,7 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
         seq = seq[maxIdle: ]             
         idxStart -= maxIdle
 
-    seq    = seq / 3.6                                  # m/s
+    seq    = seq / 3.6                              # m/s
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
 
