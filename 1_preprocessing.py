@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 15:48:31
+@LastEditTime: 2019-09-20 18:09:45
 @Update: 
 '''
 import os
@@ -18,7 +18,11 @@ import pywt
 
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
 
-IDLETHRESH = 3.
+IDLETHRESH = 2.
+MAXSPEEDTHRESH = 5.
+MAXACCABS  = 17
+MINTIME    = 20
+MINRUNTIME = 3
 
 def timestamp2unix(timestamp):
     """
@@ -90,7 +94,7 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=IDLETHRESH):
     # speedSeq[speedSeq < speedThresh] = 0.                                           # 小于阈值作怠速处理
     speedSequences = list(map(lambda x: speedSeq[x[0]: x[1]], cutIndex))
 
-    return speedSequences
+    return np.array(speedSequences)
 
 def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     """
@@ -175,19 +179,59 @@ if __name__ == "__main__":
 
         # gpsSpeed = dwtDecompose(gpsSpeed, 2)
 
+        # --------------------------------------
+        ## 切分序列
         print("Cutting sequences...")
         if os.path.exists('output/gpsSpeedSequences_file%d.npy' % i):
             gpsSpeedSeq = np.load('output/gpsSpeedSequences_file%d.npy' % i)
         else:
             gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
-            np.save('output/gpsSpeedSequences_file%d.npy' % i, gpsSpeedSeq)
+
+        # --------------------------------------
+        ## 计算特征
+        print("Calculating features...")
+        gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
+        
+        # --------------------------------------
+        ## 删除峰值速度小于阈值的序列
+        n_samples = gpsSpeedFeat.shape[0]
+        print("Deleting some sequences...")
+        index = gpsSpeedFeat[:, 0] > MAXSPEEDTHRESH
+        gpsSpeedFeat = gpsSpeedFeat[index]
+        gpsSpeedSeq  = gpsSpeedSeq [index]
+        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+        ## 删除加速度大于阈值的序列
+        n_samples = gpsSpeedFeat.shape[0]
+        index = np.bitwise_and(
+            gpsSpeedFeat[:, 9] < MAXACCABS, 
+            gpsSpeedFeat[:, 11] > - MAXACCABS)
+        gpsSpeedFeat = gpsSpeedFeat[index]
+        gpsSpeedSeq  = gpsSpeedSeq [index]
+        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+        ## 删除总时长小于阈值的序列
+        n_samples = gpsSpeedFeat.shape[0]
+        index = gpsSpeedFeat[:, 4] > MINTIME
+        gpsSpeedFeat = gpsSpeedFeat[index]
+        gpsSpeedSeq  = gpsSpeedSeq [index]
+        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+        ## 删除运行时长小于阈值的序列
+        n_samples = gpsSpeedFeat.shape[0]
+        index = gpsSpeedFeat[:, 3] > MINRUNTIME
+        gpsSpeedFeat = gpsSpeedFeat[index]
+        gpsSpeedSeq  = gpsSpeedSeq [index]
+        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+        # --------------------------------------
+        ## 保存
         print("Number of sequences: %d, Mean of sequences' length: %f" 
                 % (len(gpsSpeedSeq), gpsSpeed.shape[0] / len(gpsSpeedSeq)))
 
-        print("Calculating features...")
-        gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
+        np.save('output/gpsSpeedSequences_file%d.npy' % i, gpsSpeedSeq)
         np.save('output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
-    
+
     plt.savefig("images/1_gpsSpeed.png")
     plt.show()
     ## 小波变换去噪
