@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 21:23:01
+@LastEditTime: 2019-09-20 22:28:27
 @Update: 
 '''
 import os
@@ -54,6 +54,9 @@ plt.savefig("images/3_sequences_kmeans.png")
 ## 查看峰值速度大于30的运动学片段样例
 index = features[:, 0] > 30
 subseq = sequences[index]; subY = y[index]
+print("Number of sequences(>30): ", subseq.shape[0])
+if subseq.shape[0] > 16:
+   subseq = subseq[:16]; subY = subY[:16]
 n_sequences = subseq.shape[0]
 nh = int(np.ceil(np.sqrt(n_sequences))); nw = n_sequences // nh + 1
 fig = plt.figure(figsize=(nw * 3, nh * 2))
@@ -67,7 +70,7 @@ plt.savefig("images/3_maxSpeed_geq_30_sequences.png")
 # ------------------------------------------------------------
 ## 构造统计量，统计其长度直方图、与各类别的长度直方图
 def getStatistic(features):
-    return features[:, 1]
+    return features[:, 0]
 
 statistic = getStatistic(features)
 plt.figure()
@@ -113,11 +116,12 @@ plt.figure()
 plt.title("Chosen Feature - GMM")
 plt.xlabel("feature value")
 # plt.ylim(0, 0.02)
-plt.ylabel("P")
+plt.ylabel("p(x)")
 for i in range(n_classes):
     mu, sigma = gmm.means_[i, 0], gmm.covariances_[i, 0]
     y_ = np.exp(-0.5*np.square((bins-mu)/sigma))/(np.sqrt(2*np.pi)*sigma)
     plt.plot(bins, y_ * gmm.weights_[i], label="class%d, mu=%.2f, sigma=%.2f" % (i, mu, sigma))
-    plt.grid(); plt.legend()
+plt.grid(); plt.legend()
 plt.savefig("images/3_feat_hist_GMM.png")
-plt.show()
+
+# plt.show()

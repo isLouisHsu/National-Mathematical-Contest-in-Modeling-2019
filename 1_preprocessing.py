@@ -6,15 +6,17 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 21:25:28
+@LastEditTime: 2019-09-20 22:36:42
 @Update: 
 '''
 import os
+import pywt
 import time, datetime
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import pywt
+from scipy.interpolate import interp1d
+
 
 from params import IDLETHRESH, MAXSPEEDTHRESH, MAXACCABS, MINTIME, MINRUNTIME
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
@@ -67,15 +69,21 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=IDLETHRESH):
         speedSequences: {list[ndarray(n_length)]}
     """
     ## 类型1：时间不连续
-    isContiguous = np.r_[True, ((timestamp[1:] - timestamp[:-1]) == 1).astype(np.bool)]
-    notContiguousIndex = np.sort(np.where(isContiguous == False)[0])                # 不连续的开始时间点
-    for index in notContiguousIndex[::-1]:                                          # 按不连续两端的数据的均值进行补全
-        numCycle  = int(timestamp[index] - timestamp[index - 1])
-        padArray  = timestamp[index - 1] + np.arange(numCycle - 1, dtype=np.float) + 1
-        timestamp = np.r_[timestamp[:index], padArray, timestamp[index:]]           # 补全时间戳
-        # padArray  = np.full(numCycle, 0.5 * (speedSeq[index - 1] + speedSeq[index]))  # 填充两端均值
-        padArray  = np.full(numCycle, 0)                                            # 填充`0`
-        speedSeq  = np.r_[speedSeq[:index], padArray, speedSeq[index:]]             # 补全速度序列
+    # isContiguous = np.r_[True, ((timestamp[1:] - timestamp[:-1]) == 1).astype(np.bool)]
+    # notContiguousIndex = np.sort(np.where(isContiguous == False)[0])                # 不连续的开始时间点
+    # for index in notContiguousIndex[::-1]:                                          # 按不连续两端的数据的均值进行补全
+    #     numCycle  = int(timestamp[index] - timestamp[index - 1])
+    #     padArray  = timestamp[index - 1] + np.arange(numCycle - 1, dtype=np.float) + 1
+    #     timestamp = np.r_[timestamp[:index], padArray, timestamp[index:]]           # 补全时间戳
+    #     # padArray  = np.full(numCycle, 0.5 * (speedSeq[index - 1] + speedSeq[index]))  # 填充两端均值
+    #     padArray  = np.full(numCycle, 0)                                            # 填充`0`
+    #     speedSeq  = np.r_[speedSeq[:index], padArray, speedSeq[index:]]             # 补全速度序列
+
+    minTimestamp, maxTimestamp = timestamp.min(), timestamp.max()
+    x = (timestamp - minTimestamp).astype(np.float); y = speedSeq.astype(np.float)
+    f = interp1d(x, y, kind='linear')
+    x = np.arange(maxTimestamp - minTimestamp + 1) 
+    speedSeq = f(x); timestamp = x + minTimestamp
 
     ## 类型2：加减速异常数据 TODO:
     
@@ -111,7 +119,7 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     n_dist = seq.sum()
 
     n_ = 2
-    temp = np.r_[np.zeros(n_), seq]
+    temp = np.r_[np.ones(n_)*seq[0], seq]
     accelerate = temp[n_:] - temp[:-n_]       # 加速度(m/s)
     accelerate = accelerate[idxStart:]
 
@@ -154,13 +162,12 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
 
 if __name__ == "__main__":
 
-    # filename = 'data/temp.xlsx'
-
     plt.figure()
     plt.title("Histogram of Speed")
     
     for i in range(1, 4):
         
+        # filename = 'data/temp.xlsx'
         filename = 'data/file%d.xlsx' % i
         data = readData(filename)
         print(i, data.shape)

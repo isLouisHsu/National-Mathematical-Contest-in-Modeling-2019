@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-20 21:28:57
+@LastEditTime: 2019-09-20 22:23:22
 @Update: 
 '''
 import os
@@ -41,9 +41,14 @@ sequences = sequences[index]
 features  = features [index]
 
 # ------------------------------------------------------------------------------------
-index = 0
-feat      = features[:, index]                              # 最大速度(m/s)
+## 删除运行时间长于totalTime的序列
 totalTime = 1200.
+index = features[:, 3] <= totalTime
+sequences = sequences[index]
+features  = features [index]
+
+# ------------------------------------------------------------------------------------
+feat      = features[:, 0]                                  # 最大速度(m/s)
 sumRunTime = np.sum(features[:, 3])                         # 运行时间(s)
 
 # ------------------------------------------------------------------------------------
@@ -64,7 +69,7 @@ for i in range(len(featLandmarks) + 1):
     subSequence = sequences[index]
     subFeature  = features [index]
 
-    n, bins = np.histogram(subFeature[:, 3], bins=100)
+    n, bins = np.histogram(subFeature[:, 3], bins=75)
     bins = (bins[1:] + bins[:-1]) / 2
     freq = n / n.sum()
     cumFreq = [np.sum(freq[:i+1]) for i in range(freq.shape[0])]
