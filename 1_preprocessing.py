@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 10:30:51
+@LastEditTime: 2019-09-20 14:36:19
 @Update: 
 '''
 import os
@@ -18,7 +18,7 @@ import pywt
 
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
 
-IDLETHRESH = 2.
+IDLETHRESH = 3.
 
 def timestamp2unix(timestamp):
     """
@@ -106,37 +106,48 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
         seq = seq[maxIdle: ]             
         idxStart -= maxIdle
 
-    seq    = seq / 3.6                              # m/s
+    seq    = seq / 3.6                                  # m/s
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
 
-    accelerate = np.r_[0, seq[1:] - seq[:-1]]       # 加速度(m/s)
+    n_ = 2
+    temp = np.r_[np.zeros(n_), seq]
+    accelerate = temp[n_:] - temp[:-n_]       # 加速度(m/s)
     accelerate = accelerate[idxStart:]
 
     feature = []
     
-    feature += [seq.max()]                          # 峰值速度(m/s)
-    feature += [n_dist / (n_sec - idxStart)]        # 平均速度(m/s)
-    feature += [seq.std()]                          # 速度标准差
+    feature += [seq.max()]                              # 0, 峰值速度(m/s)
+    feature += [n_dist / (n_sec - idxStart)]            # 1, 平均速度(m/s)
+    feature += [seq.std()]                              # 2, 速度标准差
+    
+    feature += [n_sec - idxStart]                       # 3, 运行时间(s)
+    feature += [n_sec]                                  # 4, 时长(s)
 
-    feature += [np.where(accelerate > 0.)[0].shape[0]]  # 加速时间(s)
-    feature += [np.where(accelerate < 0.)[0].shape[0]]  # 减速时间(s)
+    feature += [np.where(accelerate > 0.)[0].shape[0]]  # 5, 加速时间(s)
+    feature += [np.where(accelerate < 0.)[0].shape[0]]  # 6, 减速时间(s)
 
-    feature += [accelerate.max()]                   # 峰值加速度
-    feature += [accelerate.min()]                   # 峰值减速度
+    feature += [accelerate.max()]                       # 7, 峰值加速度
+    feature += [accelerate.min()]                       # 8, 峰值减速度
 
     temp = accelerate[accelerate > 0.]
-    feature += [temp.mean()]                        # 平均加速度
-    feature += [temp.std()]                         # 加速度标准差
+    if temp.shape[0] == 0:
+        feature += [0]                                  # 9, 平均加速度
+        feature += [0]                                  # 10, 加速度标准差
+    else:
+        feature += [temp.mean()]                        # 9, 平均加速度
+        feature += [temp.std()]                         # 10, 加速度标准差
     temp = accelerate[accelerate < 0.]
-    feature += [temp.mean()]                        # 平均减速度
-    feature += [temp.std()]                         # 减速度标准差
-    
-    feature += [n_sec - idxStart]                   # 运行时间(s)
-    # feature += [n_sec]                              # 时长(s)
-    # feature += [n_dist]                             # 距离(m)
-    feature += [idxStart / n_sec]                   # 怠速时间比(%)
-    feature += [n_dist / n_sec]                     # 平均运行速度(m/s)
+    if temp.shape[0] == 0:
+        feature += [0]                                  # 11, 平均减速度
+        feature += [0]                                  # 12, 减速度标准差
+    else:
+        feature += [temp.mean()]                        # 11, 平均减速度
+        feature += [temp.std()]                         # 12, 减速度标准差
+        
+    feature += [n_dist]                                 # 距离(m)
+    feature += [idxStart / n_sec]                       # 13, 怠速时间比(%)
+    feature += [n_dist / n_sec]                         # 14, 平均运行速度(m/s)
     
     feature = np.array(feature)
     return feature

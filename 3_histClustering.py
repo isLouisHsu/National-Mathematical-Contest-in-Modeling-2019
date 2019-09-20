@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 11:06:03
+@LastEditTime: 2019-09-20 14:51:24
 @Update: 
 '''
 import os
@@ -26,20 +26,19 @@ features = []
 for i in range(1, 4):
     sequences += [np.load('output/gpsSpeedSequences_file%d.npy' % i)]
     features  += [np.load('output/gpsSpeedFeat_file%d.npy' % i)]
-sequences = np.concatenate(sequences, axis=0)
-features  = np.concatenate(features,  axis=0)
+sequences = np.concatenate(sequences, axis=0); features  = np.concatenate(features,  axis=0)
 
 # ------------------------------------------------------------
+## 查看各类的运动学片段样例
 y = pipeline.predict(features)
 n_classes, n_sequences = len(set(y)), 5
-fig = plt.figure(figsize=(n_classes*2, n_sequences*2))
+fig = plt.figure(figsize=(n_classes*3, n_sequences*2))
 for i in range(n_classes):
     subseq = sequences[y == i]
-    if subseq.shape[0] < n_sequences:
-        continue
     for j in range(n_sequences):
         ax = fig.add_subplot(n_sequences, n_classes, n_classes*j + i + 1)
-        ax.plot(subseq[j * 2])
+        if j < subseq.shape[0]:
+            ax.plot(subseq[j])
         if i == 0:
             ax.set_ylabel("km/h")
         if j == 0:
@@ -47,6 +46,7 @@ for i in range(n_classes):
 plt.savefig("images/sequences_kmeans.png")
 
 # ------------------------------------------------------------
+## 统计总的序列长度直方图、各类别序列长度直方图
 index = 0
 maxSpeed = features[:, index]
 plt.figure()
@@ -55,7 +55,7 @@ plt.xlabel("km/h")
 plt.ylabel("Number")
 plt.xlim(0, maxSpeed.max())
 plt.ylim(0, 400)
-n, bins, patches = plt.hist(maxSpeed, bins=int(maxSpeed.max() - maxSpeed.min()) + 1, edgecolor='white')
+n, bins, patches = plt.hist(maxSpeed, bins=int(maxSpeed.max() - maxSpeed.min()) + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/speed_hist.png")
 
 plt.figure(figsize=(5, 10))
@@ -64,13 +64,27 @@ for i in range(n_classes):
     subMaxSpeed = features[y == i][:, index]
     plt.subplot(n_classes, 1, i + 1)
     plt.xlabel("km/h")
-    plt.ylabel("Number")
+    plt.ylabel("class %d" % i)
     plt.xlim(0, maxSpeed.max())
     plt.ylim(0, 400)
-    n, bins, patches = plt.hist(subMaxSpeed, bins=int(subMaxSpeed.max() - subMaxSpeed.min()) + 1, edgecolor='white')
+    n, bins, patches = plt.hist(subMaxSpeed, bins=int(subMaxSpeed.max() - subMaxSpeed.min()) + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/speed_hist_subseq.png")
 
 # ------------------------------------------------------------
+## 删除两种多余的运动学片段，重新计算标签
+deleteClassIndex = [3, 4]
+index = np.ones(features.shape[0], dtype=np.bool)
+for idx in deleteClassIndex:
+    idx = y != idx
+    index = np.bitwise_and(index, idx)
+sequences = sequences[index]
+features  = features [index]
+pipeline.set_params(kmeans__n_clusters=n_clusters - len(deleteClassIndex))
+y = pipeline.fit_predict(features)
+n_classes = len(set(y))
+
+# ------------------------------------------------------------
+## 绘制高斯混合模型曲线
 gmm = GaussianMixture(n_components=n_components)
 gmm.fit(maxSpeed.reshape(-1, 1))
 n, bins, patches = plt.hist(maxSpeed, bins=int(maxSpeed.max() - maxSpeed.min()) + 1, edgecolor='white')
@@ -81,7 +95,8 @@ plt.ylabel("P")
 for i in range(n_components):
     mu, sigma = gmm.means_[i, 0], gmm.covariances_[i, 0]
     y_ = np.exp(-0.5*np.square((bins-mu)/sigma))/(np.sqrt(2*np.pi)*sigma)
-    plt.plot(bins, y_)
+    # plt.plot(bins, y_ * gmm.weights_[i], 'b')
+    plt.plot(bins, y_ * gmm.weights_[i])
     plt.grid()
 plt.savefig("images/speed_hist_GMM.png")
 plt.show()

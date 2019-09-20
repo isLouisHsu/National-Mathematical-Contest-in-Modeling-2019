@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-20 10:38:39
+@LastEditTime: 2019-09-20 14:41:03
 @Update: 
 '''
 import os
@@ -20,7 +20,7 @@ from sklearn.cluster import KMeans, DBSCAN
 from sklearn.model_selection import GridSearchCV
 from sklearn.externals import joblib
 
-SCALAR = MinMaxScaler
+SCALAR = StandardScaler
 
 speedFeats = []
 for i in range(1, 4):
@@ -61,7 +61,7 @@ steps = [
 pipline = Pipeline(steps)
 
 scores = []
-n_clusters_list = list(range(3, 7))
+n_clusters_list = list(range(3, 15))
 for n_clusters in n_clusters_list:
     pipline.set_params(kmeans__n_clusters=n_clusters)
     pipline.fit(speedFeats)
@@ -97,4 +97,3 @@ mean_            = pipline.named_steps.pca.mean_
 clusterCenters  = cluster_centers_.dot(components_) + mean_
 clusterCenters  = pipline.named_steps.scaler.inverse_transform(clusterCenters)
 print(clusterCenters)
-pass
