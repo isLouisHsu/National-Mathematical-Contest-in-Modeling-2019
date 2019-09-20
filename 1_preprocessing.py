@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 14:36:19
+@LastEditTime: 2019-09-20 15:08:30
 @Update: 
 '''
 import os
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
         np.save('output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
     
-    plt.savefig("images/gpsSpeed.png")
+    plt.savefig("images/1_gpsSpeed.png")
     plt.show()
     ## 小波变换去噪
     # speedSeqDwt = dwtDecompose(speedSeq, dwtThresh)

@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 14:51:24
+@LastEditTime: 2019-09-20 15:09:18
 @Update: 
 '''
 import os
@@ -43,32 +43,30 @@ for i in range(n_classes):
             ax.set_ylabel("km/h")
         if j == 0:
             ax.set_title("class %d" % (i))
-plt.savefig("images/sequences_kmeans.png")
+plt.savefig("images/4_sequences_kmeans.png")
 
 # ------------------------------------------------------------
 ## 统计总的序列长度直方图、各类别序列长度直方图
 index = 0
-maxSpeed = features[:, index]
+chosenFeat = features[:, index]
 plt.figure()
-plt.title("Maximum speed(km/s) - all")
-plt.xlabel("km/h")
+plt.title("Chosen Feature - all")
 plt.ylabel("Number")
-plt.xlim(0, maxSpeed.max())
+plt.xlim(0, chosenFeat.max())
 plt.ylim(0, 400)
-n, bins, patches = plt.hist(maxSpeed, bins=int(maxSpeed.max() - maxSpeed.min()) + 1, facecolor='blue', edgecolor='white')
-plt.savefig("images/speed_hist.png")
+n, bins, patches = plt.hist(chosenFeat, bins=int(chosenFeat.max() - chosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
+plt.savefig("images/4_feat_hist.png")
 
 plt.figure(figsize=(5, 10))
-plt.title("Maximum speed(km/s) - classes")
+plt.title("Chosen Feature - classes")
 for i in range(n_classes):
-    subMaxSpeed = features[y == i][:, index]
+    subChosenFeat = features[y == i][:, index]
     plt.subplot(n_classes, 1, i + 1)
-    plt.xlabel("km/h")
-    plt.ylabel("class %d" % i)
-    plt.xlim(0, maxSpeed.max())
+    plt.ylabel("Number - class %d" % i)
+    plt.xlim(0, chosenFeat.max())
     plt.ylim(0, 400)
-    n, bins, patches = plt.hist(subMaxSpeed, bins=int(subMaxSpeed.max() - subMaxSpeed.min()) + 1, facecolor='blue', edgecolor='white')
-plt.savefig("images/speed_hist_subseq.png")
+    n, bins, patches = plt.hist(subChosenFeat, bins=int(subChosenFeat.max() - subChosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
+plt.savefig("images/4_feat_hist_subseq.png")
 
 # ------------------------------------------------------------
 ## 删除两种多余的运动学片段，重新计算标签
@@ -86,11 +84,10 @@ n_classes = len(set(y))
 # ------------------------------------------------------------
 ## 绘制高斯混合模型曲线
 gmm = GaussianMixture(n_components=n_components)
-gmm.fit(maxSpeed.reshape(-1, 1))
-n, bins, patches = plt.hist(maxSpeed, bins=int(maxSpeed.max() - maxSpeed.min()) + 1, edgecolor='white')
+gmm.fit(chosenFeat.reshape(-1, 1))
+n, bins = np.histogram(chosenFeat, bins=int(chosenFeat.max() - chosenFeat.min()) + 1)
 plt.figure()
-plt.title("Maximum speed(km/s) - GMM")
-plt.xlabel("km/h")
+plt.title("Chosen Feature - GMM")
 plt.ylabel("P")
 for i in range(n_components):
     mu, sigma = gmm.means_[i, 0], gmm.covariances_[i, 0]
@@ -98,5 +95,5 @@ for i in range(n_components):
     # plt.plot(bins, y_ * gmm.weights_[i], 'b')
     plt.plot(bins, y_ * gmm.weights_[i])
     plt.grid()
-plt.savefig("images/speed_hist_GMM.png")
+plt.savefig("images/4_feat_hist_GMM.png")
 plt.show()

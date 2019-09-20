@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-20 14:41:03
+@LastEditTime: 2019-09-20 15:08:47
 @Update: 
 '''
 import os
@@ -47,7 +47,7 @@ plt.plot([pipline.named_steps.pca.explained_variance_ratio_[:i+1].sum() for i in
 plt.xlabel("Number of Components")
 plt.ylabel("Sum of Ratio of Explained Variance")
 plt.grid()
-plt.savefig("images/pca.png")
+plt.savefig("images/2_pca.png")
 plt.show()
 
 # ------------------------------------------------------------------
@@ -73,7 +73,7 @@ plt.plot(n_clusters_list, scores)
 plt.xlabel("Number of Clusters")
 plt.ylabel("Score")
 plt.grid()
-plt.savefig("images/kmeans.png")
+plt.savefig("images/2_kmeans.png")
 plt.show()
 
 # ------------------------------------------------------------------
