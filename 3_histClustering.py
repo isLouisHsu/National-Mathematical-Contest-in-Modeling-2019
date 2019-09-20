@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 15:55:18
+@LastEditTime: 2019-09-20 15:57:40
 @Update: 
 '''
 import os
@@ -53,7 +53,7 @@ plt.figure()
 plt.title("Chosen Feature - all")
 plt.ylabel("Number")
 plt.xlim(0, chosenFeat.max())
-plt.ylim(0, 400)
+plt.ylim(0, 500)
 n, bins, patches = plt.hist(chosenFeat, bins=int(chosenFeat.max() - chosenFeat.min()) + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/3_feat_hist.png")
 
