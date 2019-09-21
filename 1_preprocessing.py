@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-21 13:49:19
+@LastEditTime: 2019-09-21 14:26:19
 @Update: 
 '''
 import os
@@ -115,6 +115,9 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
         idxStart -= maxIdle
 
     seq    = seq / 3.6                                 # m/s
+
+    seq = dwtDecompose(seq, dwtTime)
+
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
 
