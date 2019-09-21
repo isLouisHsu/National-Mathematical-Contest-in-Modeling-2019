@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-20 22:23:22
+@LastEditTime: 2019-09-21 12:29:49
 @Update: 
 '''
 import os
@@ -15,22 +15,18 @@ from matplotlib import mlab
 from matplotlib import pyplot as plt
 from sklearn.externals import joblib
 
-from params import deleteClassIndex, featLandmarks
+from params import n_components_default, n_clusters_default
+from params import deleteClassIndex, featLandmarks, totalTime
 
-sequences = []
-features = []
-for i in range(1, 4):
-    sequences += [np.load('output/gpsSpeedSequences_file%d.npy' % i)]
-    features  += [np.load('output/gpsSpeedFeat_file%d.npy' % i)]
-sequences = np.concatenate(sequences, axis=0)
-features  = np.concatenate(features,  axis=0)
+sequences = np.load('output/gpsSpeedSequences.npy')
+features  = np.load('output/gpsSpeedFeatures.npy')
 
 # ------------------------------------------------------------------------------------
 ## 删除异常类别的样本
-n_components = input("Please enter the number of components(default 6): ")
-n_components = 6 if n_components == '' else int(n_components)
-n_clusters   = input("Please enter the number of clusters  (default 8): ")
-n_clusters   = 8 if n_clusters == '' else int(n_clusters)
+n_components = input("Please enter the number of components(default %d): " % n_components_default)
+n_components = n_components_default if n_components == '' else int(n_components)
+n_clusters   = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
 pipeline = joblib.load("output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 y = pipeline.predict(features)
 index = np.ones(features.shape[0], dtype=np.bool)
@@ -42,7 +38,6 @@ features  = features [index]
 
 # ------------------------------------------------------------------------------------
 ## 删除运行时间长于totalTime的序列
-totalTime = 1200.
 index = features[:, 3] <= totalTime
 sequences = sequences[index]
 features  = features [index]
@@ -79,17 +74,22 @@ for i in range(len(featLandmarks) + 1):
     Nk = int(np.round(Tk / tk))                             # 当前速度区间，划分的累积频率区间数目
     T += [Tk]; t += [tk]; N += [Nk]
     
+    xlim_ = bins[np.array(cumFreq) < 0.9][-1]
+    # -----------------------------
     ax = fig.add_subplot(len(featLandmarks) + 1, 2, i * 2 + 1)
+    # ax.set_xlabel("index(bins)")
     ax.set_xlabel("time(s)")
-    ax.set_xticks(bins[::10])
     ax.set_ylabel("frequency(%)")
-    ax.bar(bins, freq)
-    # ax.bar(bins, n)
-    # ax.set_xlim(0, 20)
+    ax.set_xticks(bins[::10])
+    ax.set_xlim(0, xlim_)
+    # ax.bar(bins, freq)
+    ax.bar(np.arange(freq.shape[0]), freq)
+    # -----------------------------
     ax = fig.add_subplot(len(featLandmarks) + 1, 2, i * 2 + 2)
     ax.set_xlabel("time(s)")
-    ax.set_xticks(bins[::10])
     ax.set_ylabel("cumulative frequency(%)")
+    ax.set_xticks(bins[::10])
+    ax.set_xlim(0, xlim_)
     ax.plot(np.r_[0., bins], np.r_[0, cumFreq])
     ax.grid()
     
@@ -97,8 +97,7 @@ for i in range(len(featLandmarks) + 1):
     g = 1. / Nk; r = np.array([i*g for i in range(Nk)]); r = np.r_[r, 1.]; r = (r[1:] + r[:-1]) / 2
     for i in range(r.shape[0]): ax.hlines(r[i], 0, bins.max(), 'r', 'dashed')
     ax.vlines(tk, 0, 1, 'r', 'dashed')
-    
 print(T, t, N)
+plt.savefig("images/4_1_running_time.png")
 
-plt.savefig("images/4_running_time.png")
 plt.show()

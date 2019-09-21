@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-20 22:28:27
+@LastEditTime: 2019-09-21 11:53:25
 @Update: 
 '''
 import os
@@ -17,20 +17,16 @@ from sklearn.externals import joblib
 from sklearn.mixture import GaussianMixture
 
 from params import deleteClassIndex
+from params import n_components_default, n_clusters_default
 
-n_components = input("Please enter the number of components(default 6): ")
-n_components = 6 if n_components == '' else int(n_components)
-n_clusters   = input("Please enter the number of clusters  (default 8): ")
-n_clusters   = 8 if n_clusters == '' else int(n_clusters)
+n_components = input("Please enter the number of components(default %d): " % n_components_default)
+n_components = n_components_default if n_components == '' else int(n_components)
+n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
 pipeline = joblib.load("output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 
-sequences = []
-features = []
-for i in range(1, 4):
-    sequences += [np.load('output/gpsSpeedSequences_file%d.npy' % i)]
-    features  += [np.load('output/gpsSpeedFeat_file%d.npy' % i)]
-sequences = np.concatenate(sequences, axis=0); features  = np.concatenate(features,  axis=0)
-
+sequences = np.load('output/gpsSpeedSequences.npy')
+features  = np.load('output/gpsSpeedFeatures.npy')
 # ------------------------------------------------------------
 ## 查看各类的运动学片段样例
 y = pipeline.predict(features)
@@ -51,10 +47,11 @@ for i in range(n_classes):
 plt.savefig("images/3_sequences_kmeans.png")
 
 # ------------------------------------------------------------
-## 查看峰值速度大于30的运动学片段样例
-index = features[:, 0] > 30
+## 查看峰值速度大于100的运动学片段样例
+t = 100
+index = features[:, 0] > t
 subseq = sequences[index]; subY = y[index]
-print("Number of sequences(>30): ", subseq.shape[0])
+print("Number of sequences(>%d): " % t, subseq.shape[0])
 if subseq.shape[0] > 16:
    subseq = subseq[:16]; subY = subY[:16]
 n_sequences = subseq.shape[0]
@@ -65,7 +62,7 @@ for i in range(n_sequences):
     if i < subseq.shape[0]:
         ax.plot(subseq[i], label = 'class %d' % subY[i])
     ax.legend()
-plt.savefig("images/3_maxSpeed_geq_30_sequences.png")
+plt.savefig("images/3_maxSpeed_geq_%d_sequences.png" % t)
 
 # ------------------------------------------------------------
 ## 构造统计量，统计其长度直方图、与各类别的长度直方图
@@ -92,7 +89,7 @@ for i in range(n_classes):
     plt.ylabel("Number - class %d" % i)
     plt.xlim(0, statistic.max())
     # plt.ylim(0, 250)
-    n, bins, patches = plt.hist(subStatistic, bins=int(subStatistic.max() - subStatistic.min()) + 1, facecolor='blue', edgecolor='white')
+    n, bins, patches = plt.hist(subStatistic, bins=int(subStatistic.max() - subStatistic.min()) // 2 + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/3_feat_hist_subseq.png")
 
 # ------------------------------------------------------------
@@ -118,10 +115,11 @@ plt.xlabel("feature value")
 # plt.ylim(0, 0.02)
 plt.ylabel("p(x)")
 for i in range(n_classes):
-    mu, sigma = gmm.means_[i, 0], gmm.covariances_[i, 0]
-    y_ = np.exp(-0.5*np.square((bins-mu)/sigma))/(np.sqrt(2*np.pi)*sigma)
-    plt.plot(bins, y_ * gmm.weights_[i], label="class%d, mu=%.2f, sigma=%.2f" % (i, mu, sigma))
+    mu, sigma2 = gmm.means_[i, 0], gmm.covariances_[i, 0]
+    y_ = np.exp(- (bins - mu)**2 / (2 * sigma2)) / (2 * np.pi * sigma2)**0.5
+    plt.plot(bins, y_ * gmm.weights_[i], label="class%d, mu=%.2f, sigma2=%.2f" % (i, mu, sigma2))
 plt.grid(); plt.legend()
+np.save("output/3_gmm_params_.npy", [gmm.means_.reshape(-1), gmm.covariances_.reshape(-1), gmm.weights_.reshape(-1)])
 plt.savefig("images/3_feat_hist_GMM.png")
 
-# plt.show()
+plt.show()

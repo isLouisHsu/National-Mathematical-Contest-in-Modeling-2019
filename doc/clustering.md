@@ -4,10 +4,16 @@
 
 选用不同主成分数目，进行PCA，其各主成分对应特征值作图如下，作图为特征值比例，右图为累积比例
 
-![pca](images/pca.png)
+![pca](../images/2_pca.png)
 
 ## KMeans聚类
 
 指定主成分数目为6，选用不同的簇数目，作图如下
 
-![kmeans](images/kmeans.png)
+![kmeans](../images/2_kmeans.png)
+
+## 参数
+
+故最终参数为
+- 主成分数目：6
+- 聚类数目：8

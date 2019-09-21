@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-20 22:36:42
+@LastEditTime: 2019-09-21 13:49:19
 @Update: 
 '''
 import os
@@ -43,7 +43,7 @@ def readData(filename):
     data = np.array(pd.read_excel(filename))
     data[:, 0] = np.array(list(map(timestamp2unix, data[:, 0])))
 
-    return data
+    return data.astype(np.float)
 
 def getSpeedSequenceFromLongitudeAndLatitude(longitude, latitude):
     """
@@ -114,13 +114,13 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
         seq = seq[maxIdle: ]             
         idxStart -= maxIdle
 
-    seq    = seq / 3.6                              # m/s
+    seq    = seq / 3.6                                 # m/s
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
 
     n_ = 2
     temp = np.r_[np.ones(n_)*seq[0], seq]
-    accelerate = temp[n_:] - temp[:-n_]       # 加速度(m/s)
+    accelerate = temp[n_:] - temp[:-n_]                 # 加速度(m/s2)
     accelerate = accelerate[idxStart:]
 
     feature = []
@@ -153,91 +153,115 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
         feature += [temp.mean()]                        # 11, 平均减速度
         feature += [temp.std()]                         # 12, 减速度标准差
         
+    feature += [idxStart / n_sec]                       # 13, 怠速时间比(%)
     # feature += [n_dist]                                 # 13, 距离(m)
-    feature += [idxStart / n_sec]                       # 14, 怠速时间比(%)
-    feature += [n_dist / n_sec]                         # 15, 平均运行速度(m/s)
+    feature += [n_dist / n_sec]                         # 14, 平均运行速度(m/s)
+
+    # --------------------------------------------
+    feature[ 0] *= 3.6   # km/h
+    feature[ 1] *= 3.6   # km/h
+    feature[-1] *= 3.6   # km/h
     
     feature = np.array(feature)
     return feature
 
-if __name__ == "__main__":
 
-    plt.figure()
-    plt.title("Histogram of Speed")
+
+####################################################################################################
+plt.figure()
+plt.title("Histogram of Speed")
+
+gpsSpeedSeqs = []; gpsSpeedFeats = []
+for i in range(1, 4):
     
-    for i in range(1, 4):
-        
-        # filename = 'data/temp.xlsx'
-        filename = 'data/file%d.xlsx' % i
-        data = readData(filename)
-        print(i, data.shape)
-        
-        timestamp, gpsSpeed = data[:, 0], data[:, 1]
-
-        plt.subplot(3, 1, i)
-        plt.xlabel("km/h")
-        plt.ylabel("Number")
-        plt.hist(gpsSpeed, edgecolor='white')
-
-        # gpsSpeed = dwtDecompose(gpsSpeed, 2)
-
-        # --------------------------------------
-        ## 切分序列
-        print("Cutting sequences...")
-        if os.path.exists('output/gpsSpeedSequences_file%d.npy' % i):
-            gpsSpeedSeq = np.load('output/gpsSpeedSequences_file%d.npy' % i)
-        else:
-            gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
-
-        # --------------------------------------
-        ## 计算特征
-        print("Calculating features...")
-        gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
-        
-        # --------------------------------------
-        # ## 删除峰值速度小于阈值的序列
-        # n_samples = gpsSpeedFeat.shape[0]
-        # print("Deleting some sequences...")
-        # index = gpsSpeedFeat[:, 0] > MAXSPEEDTHRESH
-        # gpsSpeedFeat = gpsSpeedFeat[index]
-        # gpsSpeedSeq  = gpsSpeedSeq [index]
-        # print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
-
-        ## 删除加速度大于阈值的序列
-        n_samples = gpsSpeedFeat.shape[0]
-        index = np.bitwise_and(
-            gpsSpeedFeat[:, 9] < MAXACCABS, 
-            gpsSpeedFeat[:, 11] > - MAXACCABS)
-        gpsSpeedFeat = gpsSpeedFeat[index]
-        gpsSpeedSeq  = gpsSpeedSeq [index]
-        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
-
-        ## 删除总时长小于阈值的序列
-        n_samples = gpsSpeedFeat.shape[0]
-        index = gpsSpeedFeat[:, 4] > MINTIME
-        gpsSpeedFeat = gpsSpeedFeat[index]
-        gpsSpeedSeq  = gpsSpeedSeq [index]
-        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
-
-        ## 删除运行时长小于阈值的序列
-        n_samples = gpsSpeedFeat.shape[0]
-        index = gpsSpeedFeat[:, 3] > MINRUNTIME
-        gpsSpeedFeat = gpsSpeedFeat[index]
-        gpsSpeedSeq  = gpsSpeedSeq [index]
-        print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
-
-        # --------------------------------------
-        ## 保存
-        print("Number of sequences: %d, Mean of sequences' length: %f" 
-                % (len(gpsSpeedSeq), gpsSpeed.shape[0] / len(gpsSpeedSeq)))
-
-        np.save('output/gpsSpeedSequences_file%d.npy' % i, gpsSpeedSeq)
-        np.save('output/gpsSpeedFeat_file%d.npy' % i, gpsSpeedFeat)
-
-    plt.savefig("images/1_gpsSpeed.png")
-    plt.show()
-    ## 小波变换去噪
-    # speedSeqDwt = dwtDecompose(speedSeq, dwtThresh)
-    # plt.figure(); plt.plot(speedSeq); plt.figure(); plt.plot(speedSeqDwt); plt.show()
-    # plot_signal_decomp(gpsSpeedSeq, 'sym5', "DWT: GPS speed"); plt.show()
+    # filename = 'data/temp.xlsx'
+    filename = 'data/file%d.xlsx' % i
+    data = readData(filename)
+    print(i, data.shape)
     
+    timestamp, gpsSpeed = data[:, 0], data[:, 1]
+
+    plt.subplot(3, 1, i)
+    plt.xlabel("km/h")
+    plt.ylabel("Number")
+    plt.hist(gpsSpeed, bins=20, edgecolor='white')
+
+    # gpsSpeed = dwtDecompose(gpsSpeed, 2)
+
+    # --------------------------------------
+    ## 切分序列
+    gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
+
+    # --------------------------------------
+    ## 计算特征
+    print("Calculating features...")
+    gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
+    
+    # --------------------------------------
+    ## 删除峰值速度小于阈值的序列
+    n_samples = gpsSpeedFeat.shape[0]
+    print("Deleting some sequences...")
+    index = gpsSpeedFeat[:, 0] > MAXSPEEDTHRESH
+    gpsSpeedFeat = gpsSpeedFeat[index]
+    gpsSpeedSeq  = gpsSpeedSeq [index]
+    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+    ## 删除加速度大于阈值的序列
+    n_samples = gpsSpeedFeat.shape[0]
+    index = np.bitwise_and(
+        gpsSpeedFeat[:, 9] < MAXACCABS, 
+        gpsSpeedFeat[:, 11] > - MAXACCABS)
+    gpsSpeedFeat = gpsSpeedFeat[index]
+    gpsSpeedSeq  = gpsSpeedSeq [index]
+    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+    ## 删除总时长小于阈值的序列
+    n_samples = gpsSpeedFeat.shape[0]
+    index = gpsSpeedFeat[:, 4] > MINTIME
+    gpsSpeedFeat = gpsSpeedFeat[index]
+    gpsSpeedSeq  = gpsSpeedSeq [index]
+    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+    ## 删除运行时长小于阈值的序列
+    n_samples = gpsSpeedFeat.shape[0]
+    index = gpsSpeedFeat[:, 3] > MINRUNTIME
+    gpsSpeedFeat = gpsSpeedFeat[index]
+    gpsSpeedSeq  = gpsSpeedSeq [index]
+    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+
+    # --------------------------------------
+    ## 保存
+    print("Number of sequences: %d, Mean of sequences' length: %f" 
+            % (len(gpsSpeedSeq), gpsSpeed.shape[0] / len(gpsSpeedSeq)))
+    gpsSpeedSeqs += [gpsSpeedSeq]; gpsSpeedFeats += [gpsSpeedFeat]
+
+plt.savefig("images/1_gpsSpeed.png")
+
+gpsSpeedSeqs  = np.concatenate(gpsSpeedSeqs,  axis=0)
+gpsSpeedFeats = np.concatenate(gpsSpeedFeats, axis=0)
+np.save('output/gpsSpeedSequences.npy', gpsSpeedSeq )
+np.save('output/gpsSpeedFeatures.npy',  gpsSpeedFeat)
+# -----------------------------------------
+maxSpeed = gpsSpeedFeats[:, 0]
+# print(maxSpeed[maxSpeed > 100].shape)
+
+plt.figure()
+plt.title("Maximum Speed(km/h)")
+plt.xlabel("km/h"); plt.ylabel("Number")
+plt.hist(maxSpeed, bins=30, facecolor='blue', edgecolor='white')
+plt.savefig("images/1_maxSpeed_feat.png")
+
+# -----------------------------------------
+movingTime = gpsSpeedFeats[:, 3]
+plt.figure()
+plt.title("Moving Time(s)")
+plt.xlabel("s"); plt.ylabel("Number")
+plt.hist(movingTime, bins=30, facecolor='blue', edgecolor='white')
+plt.savefig("images/1_movingTime_feat.png")
+
+plt.show()
+
+## 小波变换去噪
+# speedSeqDwt = dwtDecompose(speedSeq, dwtThresh)
+# plt.figure(); plt.plot(speedSeq); plt.figure(); plt.plot(speedSeqDwt); plt.show()
+# plot_signal_decomp(gpsSpeedSeq, 'sym5', "DWT: GPS speed"); plt.show()
