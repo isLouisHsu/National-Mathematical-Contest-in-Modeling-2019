@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-21 10:11:08
+@LastEditTime: 2019-09-21 14:32:55
 @Update: 
 '''
 import os
@@ -94,6 +94,7 @@ components_      = pipline.named_steps.pca.components_
 mean_            = pipline.named_steps.pca.mean_
 clusterCenters  = cluster_centers_.dot(components_) + mean_
 clusterCenters  = pipline.named_steps.scaler.inverse_transform(clusterCenters)
+np.savetxt("output/2_pca_explained_variance_.txt", pipline.named_steps.pca.explained_variance_)
 np.savetxt("output/2_pca__components_.txt", components_)
 np.savetxt("output/2_pca__mean_.txt", mean_)
 np.savetxt("output/2_kmeans__cluster_centers_.txt", cluster_centers_)
