@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 14:14:34
-@LastEditTime: 2019-09-19 14:55:14
+@LastEditTime: 2019-09-21 21:54:59
 @Update: 
 '''
 #!/usr/bin/env python
@@ -21,7 +21,7 @@ def plot_signal_decomp(data, w, title):
     """Decompose and plot a signal S.
     S = An + Dn + Dn-1 + ... + D1
     
-    https://github.com/PyWavelets/pywt
+    https://github.com/PyWavelets/pywt/blob/master/demo/dwt_signal_decomposition.py
     """
     mode = pywt.Modes.smooth
     w = pywt.Wavelet(w)
@@ -73,5 +73,22 @@ def dwtDecompose(x, n):
     a = x.copy()
     for i in range(n):
         a, _ = pywt.dwt(a, w, mode)
-    reca = pywt.waverec([a] + [None] * i, w)
+    reca = pywt.waverec([a] + [None] * n, w)
     return reca
+
+if __name__ == "__main__":
+
+    data1 = np.concatenate((np.arange(1, 400),
+                            np.arange(398, 600),
+                            np.arange(601, 1024)))
+    plot_signal_decomp(data1, 'coif5', "DWT: Signal irregularity")
+
+    x = np.linspace(0.082, 2.128, num=1024)[::-1]
+    data2 = np.sin(40 * np.log(x)) * np.sign((np.log(x)))
+    plot_signal_decomp(data2, 'sym5',
+                    "DWT: Frequency and phase change - Symmlets5")
+
+    import pywt.data
+    ecg = pywt.data.ecg()
+    plot_signal_decomp(ecg, 'sym5', "DWT: Ecg sample - Symmlets5")
+    plt.show()

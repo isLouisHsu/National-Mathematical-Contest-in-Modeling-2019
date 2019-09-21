@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-21 16:04:34
+@LastEditTime: 2019-09-21 19:59:54
 @Update: 
 '''
 import os
@@ -110,6 +110,7 @@ plt.savefig("images/4_2_1_running_time_cluster%d.png" % n_clusters)
 
 # ------------------------------------------------------------------------
 ## 组合序列
+gap = 10
 combineSequences = []
 for i in range(len(chosenFeatures)):
     chosenSequence = chosenSequences[i]
@@ -117,8 +118,13 @@ for i in range(len(chosenFeatures)):
     for j in range(chosenFeature.shape[0]):
         startIdx = int(chosenFeature[j][4] - chosenFeature[j][3])
         combineSequence  = chosenSequence[j][startIdx - 1:]
-        combineSequences += [np.r_[np.zeros(10), combineSequence]]
+        combineSequences += [np.r_[np.zeros(gap), combineSequence]]
+combineSequences = np.array(combineSequences)
+lengths = np.array(list(map(lambda x: x.shape[0], combineSequences)))
+# index   = np.argsort(lengths)
+# lengths = lengths[index]; combineSequences = combineSequences[index]
 combineSequences = np.concatenate(combineSequences)
+np.save("output/4_2_2_combineSequences.npy", [combineSequences, lengths, gap])
 
 fig = plt.figure(figsize=(12, 6))
 plt.title("Output Sequence")
