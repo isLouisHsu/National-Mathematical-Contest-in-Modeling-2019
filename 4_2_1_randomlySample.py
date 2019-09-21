@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-21 13:40:39
+@LastEditTime: 2019-09-21 16:04:34
 @Update: 
 '''
 import os
@@ -19,8 +19,8 @@ from sklearn.neighbors import KernelDensity
 from params import n_components_default, n_clusters_default
 from params import deleteClassIndex, featLandmarks, totalTime
 
-sequences = np.load('output/gpsSpeedSequences.npy')
-features  = np.load('output/gpsSpeedFeatures.npy')
+sequences = np.load('output/1_gpsSpeedSequences.npy')
+features  = np.load('output/1_gpsSpeedFeatures.npy')
 
 # ------------------------------------------------------------------------------------
 ## 删除异常类别的样本
@@ -28,7 +28,7 @@ n_components = input("Please enter the number of components(default %d): " % n_c
 n_components = n_components_default if n_components == '' else int(n_components)
 n_clusters   = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
 n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
-pipeline = joblib.load("output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
+pipeline = joblib.load("output/2_1_model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 y = pipeline.predict(features)
 index = np.ones(features.shape[0], dtype=np.bool)
 for idx in deleteClassIndex:
@@ -106,7 +106,7 @@ for i in range(len(featLandmarks) + 1):
     ax.set_xlim(0, xlim_)
     ax.bar(np.arange(freq.shape[0]), freq)
 
-plt.savefig("images/4_2_running_time.png")
+plt.savefig("images/4_2_1_running_time_cluster%d.png" % n_clusters)
 
 # ------------------------------------------------------------------------
 ## 组合序列
@@ -126,6 +126,6 @@ plt.xlabel("time(s)")
 plt.ylabel("speed(km/h)")
 plt.plot(combineSequences)
 plt.grid()
-plt.savefig("images/4_2_output_sequence.png")
+plt.savefig("images/4_2_1_output_sequence_cluster%d.png" % n_clusters)
 
 plt.show()

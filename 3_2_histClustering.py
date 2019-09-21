@@ -6,15 +6,14 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-21 14:31:41
+@LastEditTime: 2019-09-21 16:48:55
 @Update: 
 '''
 import os
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.cluster import KMeans
-from sklearn.externals import joblib
 from sklearn.mixture import GaussianMixture
+from sklearn.externals import joblib
 
 from params import deleteClassIndex
 from params import n_components_default, n_clusters_default
@@ -23,10 +22,10 @@ n_components = input("Please enter the number of components(default %d): " % n_c
 n_components = n_components_default if n_components == '' else int(n_components)
 n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
 n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
-pipeline = joblib.load("output/model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
+pipeline = joblib.load("output/2_2_model_pca%d_gmm%d.pkl" % (n_components, n_clusters))
 
-sequences = np.load('output/gpsSpeedSequences.npy')
-features  = np.load('output/gpsSpeedFeatures.npy')
+sequences = np.load('output/1_gpsSpeedSequences.npy')
+features  = np.load('output/1_gpsSpeedFeatures.npy')
 # ------------------------------------------------------------
 ## 查看各类的运动学片段样例
 y = pipeline.predict(features)
@@ -44,7 +43,7 @@ for i in range(n_classes):
             ax.set_title("class %d" % (i))
         if j == n_sequences - 1:
             ax.set_xlabel("time(s)")
-plt.savefig("images/3_sequences_kmeans.png")
+plt.savefig("images/3_2_sequences_gmm_cluster%d.png" % n_clusters)
 
 # ------------------------------------------------------------
 ## 查看峰值速度大于100的运动学片段样例
@@ -62,7 +61,7 @@ for i in range(n_sequences):
     if i < subseq.shape[0]:
         ax.plot(subseq[i], label = 'class %d' % subY[i])
     ax.legend()
-plt.savefig("images/3_maxSpeed_geq_%d_sequences.png" % t)
+plt.savefig("images/3_2_maxSpeed_geq_%d_sequences_cluster%d.png" % (t, n_clusters))
 
 # ------------------------------------------------------------
 ## 构造统计量，统计其长度直方图、与各类别的长度直方图
@@ -77,7 +76,7 @@ plt.ylabel("Number")
 plt.xlim(0, statistic.max())
 # plt.ylim(0, 350)
 n, bins, patches = plt.hist(statistic, bins=int(statistic.max() - statistic.min()) + 1, facecolor='blue', edgecolor='white')
-plt.savefig("images/3_feat_hist.png")
+plt.savefig("images/3_2_feat_hist_cluster%d.png" % n_clusters)
 
 plt.figure(figsize=(5, 10))
 plt.title("Chosen Feature - classes")
@@ -90,7 +89,7 @@ for i in range(n_classes):
     plt.xlim(0, statistic.max())
     # plt.ylim(0, 250)
     n, bins, patches = plt.hist(subStatistic, bins=int(subStatistic.max() - subStatistic.min()) // 2 + 1, facecolor='blue', edgecolor='white')
-plt.savefig("images/3_feat_hist_subseq.png")
+plt.savefig("images/3_2_feat_hist_subseq_cluster%d.png" % n_clusters)
 
 # ------------------------------------------------------------
 ## 删除部分类别的运动学片段，重新计算标签
@@ -100,7 +99,7 @@ for idx in deleteClassIndex:
     index = np.bitwise_and(index, idx)
 sequences = sequences[index]
 features  = features [index]
-pipeline.set_params(kmeans__n_clusters=n_clusters - len(deleteClassIndex))
+pipeline.set_params(gmm__n_components=n_clusters - len(deleteClassIndex))
 y = pipeline.fit_predict(features)
 n_classes = len(set(y))
 
@@ -119,7 +118,7 @@ for i in range(n_classes):
     y_ = np.exp(- (bins - mu)**2 / (2 * sigma2)) / (2 * np.pi * sigma2)**0.5
     plt.plot(bins, y_ * gmm.weights_[i], label="class%d, mu=%.2f, sigma2=%.2f" % (i, mu, sigma2))
 plt.grid(); plt.legend()
-np.save("output/3_gmm_params_.npy", [gmm.means_.reshape(-1), gmm.covariances_.reshape(-1), gmm.weights_.reshape(-1)])
-plt.savefig("images/3_feat_hist_GMM.png")
+np.save("output/3_2_gmm_params_.npy", [gmm.means_.reshape(-1), gmm.covariances_.reshape(-1), gmm.weights_.reshape(-1)])
+plt.savefig("images/3_2_feat_hist_GMM_cluster%d.png" % n_clusters)
 
 plt.show()

@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-21 14:26:19
+@LastEditTime: 2019-09-21 17:36:07
 @Update: 
 '''
 import os
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 
-from params import IDLETHRESH, MAXSPEEDTHRESH, MAXACCABS, MINTIME, MINRUNTIME
+from params import IDLETHRESH, MAXSPEEDTHRESH, MAXPOSACC, MAXNEGACC, MINTIME, MINRUNTIME
 from dwt_signal_decomposition import plot_signal_decomp, dwtDecompose
 
 def timestamp2unix(timestamp):
@@ -79,12 +79,27 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=IDLETHRESH):
     #     padArray  = np.full(numCycle, 0)                                            # 填充`0`
     #     speedSeq  = np.r_[speedSeq[:index], padArray, speedSeq[index:]]             # 补全速度序列
 
+    n_origin = speedSeq.shape[0]
+
     minTimestamp, maxTimestamp = timestamp.min(), timestamp.max()
     x = (timestamp - minTimestamp).astype(np.float); y = speedSeq.astype(np.float)
     f = interp1d(x, y, kind='linear')
-    x = np.arange(maxTimestamp - minTimestamp + 1) 
-    speedSeq = f(x); timestamp = x + minTimestamp
+    x_ = np.arange(maxTimestamp - minTimestamp + 1) 
+    y_ = f(x_)
+    # -------------------------------------------
+    index = list(map(lambda _x: _x not in x, x_))
+    yInterp = y_[index]
+    plt.figure()
+    plt.title("Interpretation values")
+    plt.xlabel("value")
+    plt.ylabel("number")
+    plt.hist(yInterp, bins=1000)
+    plt.show()
+    # -------------------------------------------
+    speedSeq = y_; timestamp = x_ + minTimestamp
 
+    n_padded = speedSeq.shape[0]
+    
     ## 类型2：加减速异常数据 TODO:
     
     ## 类型3：长期停车；类型4：长时间堵车、断断续续低速行驶
@@ -97,7 +112,7 @@ def cutSpeedSequences(timestamp, speedSeq, speedThresh=IDLETHRESH):
     # speedSeq[speedSeq < speedThresh] = 0.                                           # 小于阈值作怠速处理
     speedSequences = list(map(lambda x: speedSeq[x[0]: x[1]], cutIndex))
 
-    return np.array(speedSequences)
+    return np.array(speedSequences), n_origin, n_padded
 
 def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     """
@@ -116,7 +131,7 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
 
     seq    = seq / 3.6                                 # m/s
 
-    seq = dwtDecompose(seq, dwtTime)
+    # seq = dwtDecompose(seq, dwtTime)
 
     n_sec  = seq.shape[0]
     n_dist = seq.sum()
@@ -168,8 +183,6 @@ def calFeaturesOfSequence(seq, speedThresh=IDLETHRESH, maxIdle=180, dwtTime=1):
     feature = np.array(feature)
     return feature
 
-
-
 ####################################################################################################
 plt.figure()
 plt.title("Histogram of Speed")
@@ -193,7 +206,7 @@ for i in range(1, 4):
 
     # --------------------------------------
     ## 切分序列
-    gpsSpeedSeq = cutSpeedSequences(timestamp, gpsSpeed)
+    gpsSpeedSeq, n_origin, n_padded = cutSpeedSequences(timestamp, gpsSpeed)
 
     # --------------------------------------
     ## 计算特征
@@ -201,49 +214,57 @@ for i in range(1, 4):
     gpsSpeedFeat = np.stack(list(map(calFeaturesOfSequence, gpsSpeedSeq)), 0)
     
     # --------------------------------------
+    n_detele = 0
+    
     ## 删除峰值速度小于阈值的序列
     n_samples = gpsSpeedFeat.shape[0]
     print("Deleting some sequences...")
     index = gpsSpeedFeat[:, 0] > MAXSPEEDTHRESH
     gpsSpeedFeat = gpsSpeedFeat[index]
     gpsSpeedSeq  = gpsSpeedSeq [index]
-    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
-
-    ## 删除加速度大于阈值的序列
-    n_samples = gpsSpeedFeat.shape[0]
-    index = np.bitwise_and(
-        gpsSpeedFeat[:, 9] < MAXACCABS, 
-        gpsSpeedFeat[:, 11] > - MAXACCABS)
-    gpsSpeedFeat = gpsSpeedFeat[index]
-    gpsSpeedSeq  = gpsSpeedSeq [index]
-    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
-
-    ## 删除总时长小于阈值的序列
-    n_samples = gpsSpeedFeat.shape[0]
-    index = gpsSpeedFeat[:, 4] > MINTIME
-    gpsSpeedFeat = gpsSpeedFeat[index]
-    gpsSpeedSeq  = gpsSpeedSeq [index]
-    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+    print("Delete %d samples | speed" % (n_samples - gpsSpeedFeat.shape[0]))
+    n_detele += n_samples - gpsSpeedFeat.shape[0]
 
     ## 删除运行时长小于阈值的序列
     n_samples = gpsSpeedFeat.shape[0]
     index = gpsSpeedFeat[:, 3] > MINRUNTIME
     gpsSpeedFeat = gpsSpeedFeat[index]
     gpsSpeedSeq  = gpsSpeedSeq [index]
-    print("Delete %d samples" % (n_samples - gpsSpeedFeat.shape[0]))
+    print("Delete %d samples | runing time" % (n_samples - gpsSpeedFeat.shape[0]))
+    n_detele += n_samples - gpsSpeedFeat.shape[0]
+
+    ## 删除总时长小于阈值的序列
+    n_samples = gpsSpeedFeat.shape[0]
+    index = gpsSpeedFeat[:, 4] > MINTIME
+    gpsSpeedFeat = gpsSpeedFeat[index]
+    gpsSpeedSeq  = gpsSpeedSeq [index]
+    print("Delete %d samples | total time" % (n_samples - gpsSpeedFeat.shape[0]))
+    n_detele += n_samples - gpsSpeedFeat.shape[0]
+
+    ## 删除加速度大于阈值的序列
+    n_samples = gpsSpeedFeat.shape[0]
+    index = np.bitwise_and(
+        gpsSpeedFeat[:, 9] < MAXPOSACC, 
+        gpsSpeedFeat[:, 11] > - MAXNEGACC)
+    gpsSpeedFeat = gpsSpeedFeat[index]
+    gpsSpeedSeq  = gpsSpeedSeq [index]
+    print("Delete %d samples | accelerate" % (n_samples - gpsSpeedFeat.shape[0]))
+    n_detele += n_samples - gpsSpeedFeat.shape[0]
 
     # --------------------------------------
     ## 保存
-    print("Number of sequences: %d, Mean of sequences' length: %f" 
-            % (len(gpsSpeedSeq), gpsSpeed.shape[0] / len(gpsSpeedSeq)))
+    print("Number of sequences: %d(%d deteled), Mean of sequences' length: %f" 
+            % (len(gpsSpeedSeq), n_detele, gpsSpeed.shape[0] / len(gpsSpeedSeq)))
+    print("Origin number of lines: %d, padded number of lines: %d, remaining number of lines: %d, " 
+            % (n_origin, n_padded, gpsSpeedFeat[:, 3].sum()))
     gpsSpeedSeqs += [gpsSpeedSeq]; gpsSpeedFeats += [gpsSpeedFeat]
 
 plt.savefig("images/1_gpsSpeed.png")
 
 gpsSpeedSeqs  = np.concatenate(gpsSpeedSeqs,  axis=0)
 gpsSpeedFeats = np.concatenate(gpsSpeedFeats, axis=0)
-np.save('output/gpsSpeedSequences.npy', gpsSpeedSeq )
-np.save('output/gpsSpeedFeatures.npy',  gpsSpeedFeat)
+np.save('output/1_gpsSpeedSequences.npy', gpsSpeedSeq )
+np.save('output/1_gpsSpeedFeatures.npy',  gpsSpeedFeat)
 # -----------------------------------------
 maxSpeed = gpsSpeedFeats[:, 0]
 # print(maxSpeed[maxSpeed > 100].shape)

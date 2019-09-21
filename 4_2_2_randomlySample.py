@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-21 16:04:04
+@LastEditTime: 2019-09-21 16:04:50
 @Update: 
 '''
 import os
@@ -14,6 +14,7 @@ import numpy as np
 from matplotlib import mlab
 from matplotlib import pyplot as plt
 from sklearn.externals import joblib
+from sklearn.neighbors import KernelDensity
 
 from params import n_components_default, n_clusters_default
 from params import deleteClassIndex, featLandmarks, totalTime
@@ -27,7 +28,7 @@ n_components = input("Please enter the number of components(default %d): " % n_c
 n_components = n_components_default if n_components == '' else int(n_components)
 n_clusters   = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
 n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
-pipeline = joblib.load("output/2_1_model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
+pipeline = joblib.load("output/2_2_model_pca%d_gmm%d.pkl" % (n_components, n_clusters))
 y = pipeline.predict(features)
 index = np.ones(features.shape[0], dtype=np.bool)
 for idx in deleteClassIndex:
@@ -37,19 +38,14 @@ sequences = sequences[index]
 features  = features [index]
 
 # ------------------------------------------------------------------------------------
-## 删除运行时间长于totalTime的序列
-index = features[:, 3] <= totalTime
-sequences = sequences[index]
-features  = features [index]
-
-# ------------------------------------------------------------------------------------
 feat      = features[:, 0]                                  # 最大速度(m/s)
 sumRunTime = np.sum(features[:, 3])                         # 运行时间(s)
 
 # ------------------------------------------------------------------------------------
-fig = plt.figure(figsize=(15, 12)); plt.title("Runing Time(s)")
+fig = plt.figure(figsize=(6, 12)); plt.title("Runing Time(s)")
 
-T = []; t = []; N = []
+chosenSequences = []; chosenFeatures = []
+
 for i in range(len(featLandmarks) + 1):
 
     ## 速度区间
@@ -64,40 +60,72 @@ for i in range(len(featLandmarks) + 1):
     subSequence = sequences[index]
     subFeature  = features [index]
 
-    n, bins = np.histogram(subFeature[:, 3], bins=75)
-    bins = (bins[1:] + bins[:-1]) / 2
-    freq = n / n.sum()
-    cumFreq = [np.sum(freq[:i+1]) for i in range(freq.shape[0])]
+    ## 直方图统计，各速度的直方图
+    n, bins = np.histogram(subFeature[:, 3], bins=70)
+    freq = n / n.sum()                                                      # 速度频率分布
+    cumFreq = np.array([np.sum(freq[:i+1]) for i in range(freq.shape[0])])  # 累积频率
     
+    ## 根据频率，指定每个序列的采样概率
+    p = np.zeros_like(subFeature[:, 3])
+    for j in range(n.shape[0]):
+        index = np.bitwise_and(subFeature[:, 3] > bins[j], subFeature[:, 3] < bins[j + 1])
+        p[index] = freq[j]
+    
+    ## 采样个数
     Tk = subFeature[:, 3].sum() / sumRunTime * totalTime    # 当前速度区间，运动片段运行时长之和 / 所有运动片段运行时长之和
     tk = subFeature[:, 3].mean()                            # 当前速度区间，平均运行时长
     Nk = int(np.round(Tk / tk))                             # 当前速度区间，划分的累积频率区间数目
-    T += [Tk]; t += [tk]; N += [Nk]
+
+    ## 删除运行时长大于Tk的序列
+    index = subFeature[:, 3] <= Tk
+    subSequence = subSequence[index]
+    subFeature  = subFeature [index]
+    p = p[index]
+
+    ## 依概率采样
+    index = np.random.choice(n.shape[0], size=Nk, replace=False, p=freq)
+    chosenSequence = subSequence[index]
+    chosenFeature  = subFeature [index]
+
+    ## 按峰值速度排序
+    index = np.argsort(chosenFeature[:, 0])
+    chosenSequence = chosenSequence[index]
+    chosenFeature  = chosenFeature [index]
+
+    ## 保存序列
+    chosenSequences += [chosenSequence]
+    chosenFeatures  += [chosenFeature ]
     
-    xlim_ = bins[np.array(cumFreq) < 0.9][-1]
-    # -----------------------------
-    ax = fig.add_subplot(len(featLandmarks) + 1, 2, i * 2 + 1)
-    # ax.set_xlabel("index(bins)")
+    ## 绘制直方图
+    bins = (bins[1:] + bins[:-1]) / 2
+    xlim_ = bins[np.array(cumFreq) < 0.75][-1]
+    ax = fig.add_subplot(len(featLandmarks) + 1, 1, i + 1)
     ax.set_xlabel("time(s)")
     ax.set_ylabel("frequency(%)")
     ax.set_xticks(bins[::10])
     ax.set_xlim(0, xlim_)
-    # ax.bar(bins, freq)
     ax.bar(np.arange(freq.shape[0]), freq)
-    # -----------------------------
-    ax = fig.add_subplot(len(featLandmarks) + 1, 2, i * 2 + 2)
-    ax.set_xlabel("time(s)")
-    ax.set_ylabel("cumulative frequency(%)")
-    ax.set_xticks(bins[::10])
-    ax.set_xlim(0, xlim_)
-    ax.plot(np.r_[0., bins], np.r_[0, cumFreq])
-    ax.grid()
-    
-    if Nk == 0: continue
-    g = 1. / Nk; r = np.array([i*g for i in range(Nk)]); r = np.r_[r, 1.]; r = (r[1:] + r[:-1]) / 2
-    for i in range(r.shape[0]): ax.hlines(r[i], 0, bins.max(), 'r', 'dashed')
-    ax.vlines(tk, 0, 1, 'r', 'dashed')
-print(T, t, N)
-plt.savefig("images/4_1_running_time.png")
+
+plt.savefig("images/4_2_2_running_time_cluster%d.png" % n_clusters)
+
+# ------------------------------------------------------------------------
+## 组合序列
+combineSequences = []
+for i in range(len(chosenFeatures)):
+    chosenSequence = chosenSequences[i]
+    chosenFeature  = chosenFeatures[i]
+    for j in range(chosenFeature.shape[0]):
+        startIdx = int(chosenFeature[j][4] - chosenFeature[j][3])
+        combineSequence  = chosenSequence[j][startIdx - 1:]
+        combineSequences += [np.r_[np.zeros(10), combineSequence]]
+combineSequences = np.concatenate(combineSequences)
+
+fig = plt.figure(figsize=(12, 6))
+plt.title("Output Sequence")
+plt.xlabel("time(s)")
+plt.ylabel("speed(km/h)")
+plt.plot(combineSequences)
+plt.grid()
+plt.savefig("images/4_2_2_output_sequence_cluster%d.png" % n_clusters)
 
 plt.show()
