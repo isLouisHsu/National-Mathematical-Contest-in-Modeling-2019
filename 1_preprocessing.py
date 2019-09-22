@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-22 09:36:50
+@LastEditTime: 2019-09-22 10:34:21
 @Update: 
 '''
 import os
@@ -102,7 +102,7 @@ def calFeaturesOfSequence(speedSeq, timeSeq, speedThresh=IDLETHRESH, maxIdle=180
     index = np.r_[1, isIdle[1:] - isIdle[:-1]]          # 负跳变(-1)：从怠速起步
     idxStart = np.where(index == -1)[0]                 # 起步时间
     if idxStart.shape[0] == 0: 
-        return np.zeros(15)
+        return np.zeros(16)
     else:
         idxStart = idxStart[0]
 
@@ -141,24 +141,25 @@ def calFeaturesOfSequence(speedSeq, timeSeq, speedThresh=IDLETHRESH, maxIdle=180
 
     feature += [accelerate.max()]                       # 7, 峰值加速度
     feature += [accelerate.min()]                       # 8, 峰值减速度
+    feature += [accelerate.mean()]                      # 9, 平均加速度（包含正负）
 
     temp = accelerate[accelerate > 0.]
     if temp.shape[0] == 0:
-        feature += [0]                                  # 9, 平均加速度
-        feature += [0]                                  # 10, 加速度标准差
+        feature += [0]                                  # 10, 平均加速度
+        feature += [0]                                  # 11, 加速度标准差
     else:
-        feature += [temp.mean()]                        # 9, 平均加速度
-        feature += [temp.std()]                         # 10, 加速度标准差
+        feature += [temp.mean()]                        # 10, 平均加速度
+        feature += [temp.std()]                         # 11, 加速度标准差
         
     temp = accelerate[accelerate < 0.]
     if temp.shape[0] == 0:
-        feature += [0]                                  # 11, 平均减速度
-        feature += [0]                                  # 12, 减速度标准差
+        feature += [0]                                  # 12, 平均减速度
+        feature += [0]                                  # 13, 减速度标准差
     else:
-        feature += [temp.mean()]                        # 11, 平均减速度
-        feature += [temp.std()]                         # 12, 减速度标准差
+        feature += [temp.mean()]                        # 12, 平均减速度
+        feature += [temp.std()]                         # 13, 减速度标准差
         
-    feature += [idxStart / n_sec]                       # 13, 怠速时间比(%)
+    feature += [idxStart / n_sec]                       # 14, 怠速时间比(%)
     feature += [n_dist   / n_sec]                       # -1, 平均运行速度(m/s)
 
     # --------------------------------------------
