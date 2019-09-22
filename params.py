@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 21:22:41
-@LastEditTime: 2019-09-22 11:43:17
+@LastEditTime: 2019-09-22 14:44:05
 @Update: 
 '''
 # step 1
@@ -20,12 +20,12 @@ MINRUNTIME = 4          # s，运行时间小于该值的序列被删除
 
 # step 2
 n_components_default = 6
-n_clusters_default   = 5
+n_clusters_default   = 8
 
 # step 3
-deleteClassIndex = [2, 4]
+deleteClassIndex = [0, 3, 7]
 
 # step 4
 featLandmarks = [25, 55]
-totalTime = 1250.
-sampleTime = 1000
+totalTime  = 1300.
+sampleTime = 2000

@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-22 10:04:47
+@LastEditTime: 2019-09-22 13:03:42
 @Update: 
 '''
 import os
@@ -38,8 +38,8 @@ for i in range(n_classes):
     subseq = sequences[y == i]
     for j in range(n_sequences):
         ax = fig.add_subplot(n_sequences, n_classes, n_classes*j + i + 1)
-        if j < subseq.shape[0]:
-            ax.plot(subseq[j])
+        if j*2 < subseq.shape[0]:
+            ax.plot(subseq[j*2])
         if i == 0:
             ax.set_ylabel("km/h")
         if j == 0:

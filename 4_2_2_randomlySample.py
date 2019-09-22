@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-22 09:52:54
+@LastEditTime: 2019-09-22 14:31:34
 @Update: 
 '''
 import os
@@ -17,7 +17,7 @@ from sklearn.externals import joblib
 from sklearn.neighbors import KernelDensity
 
 from params import n_components_default, n_clusters_default
-from params import deleteClassIndex, featLandmarks, totalTime
+from params import deleteClassIndex, featLandmarks, totalTime, sampleTime
 
 sequences = np.load('output/1_gpsSpeedSequences.npy')
 features  = np.load('output/1_gpsSpeedFeatures.npy')
@@ -44,10 +44,7 @@ feat      = features[:, 0]                                  # 最大速度(m/s)
 sumRunTime = np.sum(features[:, 3])                         # 运行时间(s)
 
 # ------------------------------------------------------------------------------------
-fig = plt.figure(figsize=(6, 12)); plt.title("Runing Time(s)")
-
 chosenSequences = []; chosenFeatures = []
-
 for i in range(len(featLandmarks) + 1):
 
     ## 速度区间
@@ -62,78 +59,168 @@ for i in range(len(featLandmarks) + 1):
     subSequence = sequences[index]
     subFeature  = features [index]
 
-    ## 直方图统计，各速度的直方图
-    n, bins = np.histogram(subFeature[:, 3], bins=70)
+    # ---------------------------------------------------------------------------------
+    ## 统计该速度区间，峰值速度与平均加速度（包含正负）的联合概率分布
+    featIdx0 = 0; featIdx1 = 7
+    n0, bins0 = np.histogram(subFeature[:, featIdx0], bins=6)
+    n1, bins1 = np.histogram(subFeature[:, featIdx1], bins=6)
+    gap0 = bins0[1] - bins0[0]; gap1 = bins1[1] - bins1[0]
+
+    pdf = np.zeros((n0.shape[0], n1.shape[0]))
+    for j in range(n0.shape[0]):
+        for k in range(n1.shape[0]):
+            ### 峰值速度
+            _idx1 = subFeature[:, featIdx0] > bins0[j]
+            _idx2 = subFeature[:, featIdx0] < bins0[j + 1]
+            idx1  = np.bitwise_and(_idx1, _idx2)
+            ### 平均加速度
+            _idx1 = subFeature[:, featIdx1] > bins1[k]
+            _idx2 = subFeature[:, featIdx1] < bins1[k + 1]
+            idx2  = np.bitwise_and(_idx1, _idx2)
+            ### 统计数目
+            idx   = np.bitwise_and(idx1, idx2)
+            pdf[j, k] = idx.sum()
+    pdf = pdf / pdf.sum()
+
+    plt.figure()
+    plt.imshow(pdf, cmap=plt.cm.hot)
+    plt.title("PDF")
+    plt.xlabel("max speed")
+    plt.ylabel("max accelerate")
+    plt.colorbar()
+    # plt.xticks(bins0, rotation=45)
+    # plt.yticks(bins1)
+    plt.savefig("images/4_2_1_pdf_%d.png" % i)
+    # plt.show()
+
+    # ---------------------------------------------------------------------------------
+    ## 删除运行时长大于Tk的序列
+    index = subFeature[:, 3] <= totalTime / 2
+    subSequence = subSequence[index]
+    subFeature  = subFeature [index]
+
+    ## 直方图统计，运行时长的直方图
+    n, bins = np.histogram(subFeature[:, 3], bins=500)
     freq = n / n.sum()                                                      # 速度频率分布
     cumFreq = np.array([np.sum(freq[:i+1]) for i in range(freq.shape[0])])  # 累积频率
-    
-    ## 根据频率，指定每个序列的采样概率
-    p = np.zeros_like(subFeature[:, 3])
-    for j in range(n.shape[0]):
-        index = np.bitwise_and(subFeature[:, 3] > bins[j], subFeature[:, 3] < bins[j + 1])
-        p[index] = freq[j]
     
     ## 采样个数
     Tk = subFeature[:, 3].sum() / sumRunTime * totalTime    # 当前速度区间，运动片段运行时长之和 / 所有运动片段运行时长之和
     tk = subFeature[:, 3].mean()                            # 当前速度区间，平均运行时长
     Nk = int(np.round(Tk / tk))                             # 当前速度区间，划分的累积频率区间数目
-
+    print(i, Tk, tk, Nk)
+    
     ## 删除运行时长大于Tk的序列
     # index = subFeature[:, 3] <= Tk
     # subSequence = subSequence[index]
     # subFeature  = subFeature [index]
     # p = p[index]
 
-    ## 依概率采样
-    index = np.random.choice(n.shape[0], size=Nk, replace=False, p=freq)
-    chosenSequence = subSequence[index]
-    chosenFeature  = subFeature [index]
+    # ---------------------------------------------------------------------------------
+    ## 多次采样
+    ### 根据频率，指定每个序列的采样概率
+    p = np.zeros_like(subFeature[:, 3])
+    for j in range(n.shape[0]):
+        index = np.bitwise_and(subFeature[:, 3] > bins[j], subFeature[:, 3] < bins[j + 1])
+        p[index] = freq[j]
 
-    ## 按峰值速度排序
-    index = np.argsort(chosenFeature[:, 0])
-    chosenSequence = chosenSequence[index]
-    chosenFeature  = chosenFeature [index]
-
-    ## 保存序列
-    chosenSequences += [chosenSequence]
-    chosenFeatures  += [chosenFeature ]
+    ### 计算每个样本的采样概率 = 统计频率 x 长度的高斯分布
+    p = np.zeros(subSequence.shape[0])
+    for i in range(n.shape[0]):
+        s, e = bins[i: i + 2]
+        p = np.where(np.bitwise_and(subFeature[:, 3] > s, subFeature[:, 3] < e), np.ones_like(p) * freq[i], p)
+    _gauss = lambda x, mu, sigma: np.exp(- (x - mu)**2 / (2 * sigma**2)) / (2*np.pi*sigma**2)**0.5
+    gp = _gauss(subFeature[:, 3], Tk, 150)
+    p *= gp
+    p = p / p.sum()
     
-    ## 绘制直方图
-    bins = (bins[1:] + bins[:-1]) / 2
-    xlim_ = bins[np.array(cumFreq) < 0.75][-1]
-    ax = fig.add_subplot(len(featLandmarks) + 1, 1, i + 1)
-    ax.set_xlabel("time(s)")
-    ax.set_ylabel("frequency(%)")
-    ax.set_xticks(bins[::10])
-    ax.set_xlim(0, xlim_)
-    ax.bar(np.arange(freq.shape[0]), freq)
+    ### 采样
+    subChosenSequences = []; subChosenFeatures = []
+    for j in range(sampleTime):
+        index = np.random.choice(subSequence.shape[0], size=Nk, replace=False, p=p)
+        subSequence_ = subSequence[index]
+        subFeature_  = subFeature [index]
+        subChosenSequences += [subSequence_]
+        subChosenFeatures  += [subFeature_ ]
+    subChosenSequences = np.array(subChosenSequences)
+    subChosenFeatures  = np.array(subChosenFeatures )
 
-plt.savefig("images/4_2_2_running_time_cluster%d.png" % n_clusters)
+    ## 滤除序列运行时间长度之和偏离Tk较多的序列
+    # lengths = np.array(list(map(lambda x: x[:, 3].sum(), subChosenFeatures)))
+    # # index = lengths > Tk*(1 - 0.4)
+    # index = np.bitwise_and(lengths > Tk*(1 - 0.3), lengths < Tk*(1 + 0.3))
+    # subChosenSequences = subChosenSequences[index]
+    # subChosenFeatures  = subChosenFeatures [index]
+
+    # ---------------------------------------------------------------------------------
+    ## 卡方检验
+    K = []
+    n_combine = subChosenSequences.shape[0]
+    for j in range(n_combine):
+    
+        cnt = np.zeros_like(pdf, dtype=np.int)
+        for  k in range(Nk):
+            _f = subChosenFeatures[j, k]
+            a, b = _f[featIdx0], _f[featIdx1]
+            ia = int((a - bins0[0]) // gap0)
+            ib = int((b - bins1[0]) // gap1)
+            ia = ia - 1 if a >= bins0[-1] else ia
+            ib = ib - 1 if b >= bins1[-1] else ib
+            cnt[ia, ib] += 1
+        
+        k = ((cnt - Nk * pdf)**2 / (Nk * pdf + np.finfo(np.float).eps))
+        K += [k.sum()]
+    K = np.array(K)
+
+    index = np.argsort(K)
+    K = K[index]
+    subChosenSequences = subChosenSequences[index]
+    subChosenFeatures  = subChosenFeatures[index]
+    
+    ## 选择卡方值最小的
+    n_seq = subChosenSequences.shape[0]
+    size = n_seq if n_seq < 10 else 10
+    chosenSequences += [subChosenSequences[0: size]]
+    chosenFeatures  += [subChosenFeatures [0: size]]
+
+plt.cla()
 
 # ------------------------------------------------------------------------
-## 组合序列
-gap = 10
-combineSequences = []
-for i in range(len(chosenFeatures)):
-    chosenSequence = chosenSequences[i]
-    chosenFeature  = chosenFeatures[i]
-    for j in range(chosenFeature.shape[0]):
-        startIdx = int(chosenFeature[j][4] - chosenFeature[j][3])
-        combineSequence  = chosenSequence[j][startIdx - 1:]
-        combineSequences += [np.r_[np.zeros(gap), combineSequence]]
-combineSequences = np.array(combineSequences)
-lengths = np.array(list(map(lambda x: x.shape[0], combineSequences)))
-index   = np.argsort(lengths)
-lengths = lengths[index]; combineSequences = combineSequences[index]
-combineSequences = np.concatenate(combineSequences)
-np.save("output/4_2_2_combineSequences.npy", [combineSequences, lengths, gap])
+size = min(list(map(lambda x: x.shape[0], chosenSequences)))
+print(size)
+for k in range(size):
+    ## 组合序列
+    gap = 10
+    combineSequences = []; combineFeatures = []
+    for i in range(len(chosenFeatures)):
+        chosenSequence = chosenSequences[i][k]
+        chosenFeature  = chosenFeatures [i][k]
+        for j in range(chosenFeature.shape[0]):
+            # print(chosenSequence[j])
+            startIdx = int(chosenFeature[j][4] - chosenFeature[j][3])
+            combineSequence = chosenSequence[j][startIdx - 1:]
+            combineFeature  = chosenFeature[j]
+            combineSequences += [combineSequence]
+            combineFeatures  += [combineFeature ]
 
-fig = plt.figure(figsize=(12, 6))
-plt.title("Output Sequence")
-plt.xlabel("time(s)")
-plt.ylabel("speed(km/h)")
-plt.plot(combineSequences)
-plt.grid()
-plt.savefig("images/4_2_2_output_sequence_cluster%d.png" % n_clusters)
+    ## 根据峰值速度排序
+    combineSequences = np.array(combineSequences)
+    combineFeatures  = np.array(combineFeatures )
+    index = np.argsort(combineFeatures[:, 0])
+    combineSequences = combineSequences[index]
+    combineFeatures  = combineFeatures [index]
 
-plt.show()
+    ## 显示序列
+    combineSequences = list(map(lambda x: np.r_[np.zeros(10), x], combineSequences))
+    combineSequences = np.concatenate(combineSequences)
+    fig = plt.figure(figsize=(12, 6))
+    plt.title("Output Sequence")
+    plt.xlabel("time(s)")
+    plt.ylabel("speed(km/h)")
+    plt.plot(combineSequences)
+    plt.grid()
+    plt.savefig("images/4_2_1_output_sequence_cluster%d_%d.png" % (n_clusters, k))
+    np.save("output/4_2_2_combineSequences_%d.npy" % k, combineSequences)
+    np.save("output/4_2_2_combineFeatures_%d.npy"  % k, combineFeatures )
+
+    # plt.show()
