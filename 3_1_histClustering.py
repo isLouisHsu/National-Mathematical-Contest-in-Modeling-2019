@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-21 16:53:23
+@LastEditTime: 2019-09-22 10:04:47
 @Update: 
 '''
 import os
@@ -19,10 +19,12 @@ from sklearn.mixture import GaussianMixture
 from params import deleteClassIndex
 from params import n_components_default, n_clusters_default
 
-n_components = input("Please enter the number of components(default %d): " % n_components_default)
-n_components = n_components_default if n_components == '' else int(n_components)
-n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
-n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
+# n_components = input("Please enter the number of components(default %d): " % n_components_default)
+# n_components = n_components_default if n_components == '' else int(n_components)
+n_components = n_components_default
+# n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+# n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+n_clusters = n_clusters_default
 pipeline = joblib.load("output/2_1_model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 
 sequences = np.load('output/1_gpsSpeedSequences.npy')
@@ -89,6 +91,8 @@ for i in range(n_classes):
     plt.ylabel("Number - class %d" % i)
     plt.xlim(0, statistic.max())
     # plt.ylim(0, 250)
+    if subStatistic.shape[0] == 0:
+        continue
     n, bins, patches = plt.hist(subStatistic, bins=int(subStatistic.max() - subStatistic.min()) // 2 + 1, facecolor='blue', edgecolor='white')
 plt.savefig("images/3_1_feat_hist_subseq_cluster%d.png" % n_clusters)
 
@@ -122,4 +126,4 @@ plt.grid(); plt.legend()
 np.save("output/3_1_gmm_params_.npy", [gmm.means_.reshape(-1), gmm.covariances_.reshape(-1), gmm.weights_.reshape(-1)])
 plt.savefig("images/3_1_feat_hist_GMM_cluster%d.png" % n_clusters)
 
-plt.show()
+# plt.show()

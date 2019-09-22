@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-21 16:43:03
+@LastEditTime: 2019-09-22 09:52:14
 @Update: 
 '''
 import os
@@ -49,8 +49,9 @@ plt.savefig("images/2_2_pca.png")
 plt.show()
 
 # ------------------------------------------------------------------
-n_components = input("Please enter the number of components(default %d): " % n_components_default)
-n_components = n_components_default if n_components == '' else int(n_components)
+# n_components = input("Please enter the number of components(default %d): " % n_components_default)
+# n_components = n_components_default if n_components == '' else int(n_components)
+n_components = n_components_default
 steps = [
         ('scaler', SCALAR()), 
         ('pca', PCA(n_components=n_components)), 
@@ -76,8 +77,9 @@ plt.savefig("images/2_2_gmm.png")
 plt.show()
 
 # ------------------------------------------------------------------
-n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
-n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+# n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+# n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+n_clusters = n_clusters_default
 steps = [
         ('scaler', SCALAR()), 
         ('pca', PCA(n_components=n_components)), 

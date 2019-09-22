@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 17:58:02
-@LastEditTime: 2019-09-21 16:54:41
+@LastEditTime: 2019-09-22 09:51:24
 @Update: 
 '''
 import os
@@ -27,6 +27,7 @@ SCALAR = StandardScaler
 features = np.load('output/1_gpsSpeedFeatures.npy')
 n_samples, n_features = features.shape
 print("Shape of samples: ", features.shape)
+
 
 # ------------------------------------------------------------------
 steps = [('scaler', SCALAR()), ('pca', PCA(n_components=n_features))]
@@ -49,8 +50,9 @@ plt.savefig("images/2_1_pca.png")
 plt.show()
 
 # ------------------------------------------------------------------
-n_components = input("Please enter the number of components(default %d): " % n_components_default)
-n_components = n_components_default if n_components == '' else int(n_components)
+# n_components = input("Please enter the number of components(default %d): " % n_components_default)
+# n_components = n_components_default if n_components == '' else int(n_components)
+n_components = n_components_default
 steps = [
         ('scaler', SCALAR()), 
         ('pca', PCA(n_components=n_components)), 
@@ -75,8 +77,9 @@ plt.savefig("images/2_1_kmeans.png")
 plt.show()
 
 # ------------------------------------------------------------------
-n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
-n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+# n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+# n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+n_clusters = n_clusters_default
 steps = [
         ('scaler', SCALAR()), 
         ('pca', PCA(n_components=n_components)), 

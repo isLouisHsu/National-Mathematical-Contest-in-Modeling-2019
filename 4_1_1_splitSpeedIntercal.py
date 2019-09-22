@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-21 16:04:04
+@LastEditTime: 2019-09-22 09:52:32
 @Update: 
 '''
 import os
@@ -23,10 +23,12 @@ features  = np.load('output/1_gpsSpeedFeatures.npy')
 
 # ------------------------------------------------------------------------------------
 ## 删除异常类别的样本
-n_components = input("Please enter the number of components(default %d): " % n_components_default)
-n_components = n_components_default if n_components == '' else int(n_components)
-n_clusters   = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
-n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
+# n_components = input("Please enter the number of components(default %d): " % n_components_default)
+# n_components = n_components_default if n_components == '' else int(n_components)
+n_components = n_components_default
+# n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+# n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+n_clusters = n_clusters_default
 pipeline = joblib.load("output/2_1_model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 y = pipeline.predict(features)
 index = np.ones(features.shape[0], dtype=np.bool)

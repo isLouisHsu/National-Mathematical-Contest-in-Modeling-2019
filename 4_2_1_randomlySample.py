@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-21 19:59:54
+@LastEditTime: 2019-09-22 10:13:52
 @Update: 
 '''
 import os
@@ -17,17 +17,19 @@ from sklearn.externals import joblib
 from sklearn.neighbors import KernelDensity
 
 from params import n_components_default, n_clusters_default
-from params import deleteClassIndex, featLandmarks, totalTime
+from params import deleteClassIndex, featLandmarks, totalTime, sampleTime
 
 sequences = np.load('output/1_gpsSpeedSequences.npy')
 features  = np.load('output/1_gpsSpeedFeatures.npy')
 
 # ------------------------------------------------------------------------------------
 ## 删除异常类别的样本
-n_components = input("Please enter the number of components(default %d): " % n_components_default)
-n_components = n_components_default if n_components == '' else int(n_components)
-n_clusters   = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
-n_clusters   = n_clusters_default if n_clusters == '' else int(n_clusters)
+# n_components = input("Please enter the number of components(default %d): " % n_components_default)
+# n_components = n_components_default if n_components == '' else int(n_components)
+n_components = n_components_default
+# n_clusters = input("Please enter the number of clusters  (default %d): " % n_clusters_default)
+# n_clusters = n_clusters_default if n_clusters == '' else int(n_clusters)
+n_clusters = n_clusters_default
 pipeline = joblib.load("output/2_1_model_pca%d_kmeans%d.pkl" % (n_components, n_clusters))
 y = pipeline.predict(features)
 index = np.ones(features.shape[0], dtype=np.bool)
@@ -42,10 +44,7 @@ feat      = features[:, 0]                                  # 最大速度(m/s)
 sumRunTime = np.sum(features[:, 3])                         # 运行时间(s)
 
 # ------------------------------------------------------------------------------------
-fig = plt.figure(figsize=(6, 12)); plt.title("Runing Time(s)")
-
 chosenSequences = []; chosenFeatures = []
-
 for i in range(len(featLandmarks) + 1):
 
     ## 速度区间
@@ -75,38 +74,26 @@ for i in range(len(featLandmarks) + 1):
     Tk = subFeature[:, 3].sum() / sumRunTime * totalTime    # 当前速度区间，运动片段运行时长之和 / 所有运动片段运行时长之和
     tk = subFeature[:, 3].mean()                            # 当前速度区间，平均运行时长
     Nk = int(np.round(Tk / tk))                             # 当前速度区间，划分的累积频率区间数目
-
+    print(i, Tk, tk, Nk)
+    
     ## 删除运行时长大于Tk的序列
     index = subFeature[:, 3] <= Tk
     subSequence = subSequence[index]
     subFeature  = subFeature [index]
     p = p[index]
 
-    ## 依概率采样
-    index = np.random.choice(n.shape[0], size=Nk, replace=False, p=freq)
-    chosenSequence = subSequence[index]
-    chosenFeature  = subFeature [index]
-
-    ## 按峰值速度排序
-    index = np.argsort(chosenFeature[:, 0])
-    chosenSequence = chosenSequence[index]
-    chosenFeature  = chosenFeature [index]
-
-    ## 保存序列
-    chosenSequences += [chosenSequence]
-    chosenFeatures  += [chosenFeature ]
+    ## 多次采样
+    subChosenSequences = []; subChosenFeatures = []
+    for j in range(sampleTime):
+        index = np.random.choice(n.shape[0], size=Nk, replace=False, p=freq)
+        subSequence_ = subSequence[index]
+        subFeature_  = subFeature [index]
+        subChosenSequences += [subSequence_]
+        subChosenFeatures  += [subFeature_ ]
     
-    ## 绘制直方图
-    bins = (bins[1:] + bins[:-1]) / 2
-    xlim_ = bins[np.array(cumFreq) < 0.75][-1]
-    ax = fig.add_subplot(len(featLandmarks) + 1, 1, i + 1)
-    ax.set_xlabel("time(s)")
-    ax.set_ylabel("frequency(%)")
-    ax.set_xticks(bins[::10])
-    ax.set_xlim(0, xlim_)
-    ax.bar(np.arange(freq.shape[0]), freq)
+    ## 滤除序列和长度之和偏离Tk较多的序列
 
-plt.savefig("images/4_2_1_running_time_cluster%d.png" % n_clusters)
+    pass
 
 # ------------------------------------------------------------------------
 ## 组合序列
