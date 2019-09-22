@@ -6,11 +6,12 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-22 15:42:06
+@LastEditTime: 2019-09-22 17:03:24
 @Update: 
 '''
 import os
 import numpy as np
+from scipy import signal
 from matplotlib import mlab
 from matplotlib import pyplot as plt
 from sklearn.externals import joblib
@@ -18,6 +19,35 @@ from sklearn.neighbors import KernelDensity
 
 from params import n_components_default, n_clusters_default
 from params import deleteClassIndex, featLandmarks, totalTime, sampleTime
+
+def speedAndAcceleratePdf(seq, calFreq=True):
+    """
+    Params:
+        seq: {ndarray(n_sequence)}
+    """
+    seq = signal.medfilt(seq, (3,))
+    _speedSeq = seq / 3.6                                   # m/s
+    acc = np.r_[0, _speedSeq[1:] - _speedSeq[:-1]]          # m/s2
+
+    speedLandmark      = [-np.inf] + [10 * (i + 1) for i in range(6)] + [np.inf]
+    accelerateLandmark = [-np.inf] + [i - 4 for i in range(8)]        + [np.inf]
+
+    rows, cols = len(speedLandmark) - 1, len(accelerateLandmark) - 1
+    pdf = np.zeros((rows, cols))
+    for i in range(rows):
+        for j in range(cols):
+            s, e = speedLandmark[i: i + 2]
+            index1 = np.bitwise_and(seq > s, seq < e)
+            s, e = accelerateLandmark[j: j + 2]
+            index2 = np.bitwise_and(acc > s, acc < e)
+
+            index = np.bitwise_and(index1, index2)
+            pdf[i, j] = np.where(index)[0].shape[0]
+
+    if calFreq:
+        pdf = pdf / pdf.sum()
+
+    return pdf
 
 sequences = np.load('output/1_gpsSpeedSequences.npy')
 features  = np.load('output/1_gpsSpeedFeatures.npy')
@@ -61,27 +91,30 @@ for i in range(len(featLandmarks) + 1):
 
     # ---------------------------------------------------------------------------------
     ## 统计该速度区间，峰值速度与平均加速度（包含正负）的联合概率分布
-    featIdx0 = 0; featIdx1 = 7
-    n0, bins0 = np.histogram(subFeature[:, featIdx0], bins=6)
-    n1, bins1 = np.histogram(subFeature[:, featIdx1], bins=6)
-    gap0 = bins0[1] - bins0[0]; gap1 = bins1[1] - bins1[0]
+    # featIdx0 = 0; featIdx1 = 7
+    # n0, bins0 = np.histogram(subFeature[:, featIdx0], bins=6)
+    # n1, bins1 = np.histogram(subFeature[:, featIdx1], bins=6)
+    # gap0 = bins0[1] - bins0[0]; gap1 = bins1[1] - bins1[0]
 
-    pdf = np.zeros((n0.shape[0], n1.shape[0]))
-    for j in range(n0.shape[0]):
-        for k in range(n1.shape[0]):
-            ### 峰值速度
-            _idx1 = subFeature[:, featIdx0] > bins0[j]
-            _idx2 = subFeature[:, featIdx0] < bins0[j + 1]
-            idx1  = np.bitwise_and(_idx1, _idx2)
-            ### 平均加速度
-            _idx1 = subFeature[:, featIdx1] > bins1[k]
-            _idx2 = subFeature[:, featIdx1] < bins1[k + 1]
-            idx2  = np.bitwise_and(_idx1, _idx2)
-            ### 统计数目
-            idx   = np.bitwise_and(idx1, idx2)
-            pdf[j, k] = idx.sum()
+    # pdf = np.zeros((n0.shape[0], n1.shape[0]))
+    # for j in range(n0.shape[0]):
+    #     for k in range(n1.shape[0]):
+    #         ### 峰值速度
+    #         _idx1 = subFeature[:, featIdx0] > bins0[j]
+    #         _idx2 = subFeature[:, featIdx0] < bins0[j + 1]
+    #         idx1  = np.bitwise_and(_idx1, _idx2)
+    #         ### 平均加速度
+    #         _idx1 = subFeature[:, featIdx1] > bins1[k]
+    #         _idx2 = subFeature[:, featIdx1] < bins1[k + 1]
+    #         idx2  = np.bitwise_and(_idx1, _idx2)
+    #         ### 统计数目
+    #         idx   = np.bitwise_and(idx1, idx2)
+    #         pdf[j, k] = idx.sum()
+
+    pdf = speedAndAcceleratePdf(np.concatenate(subSequence))
     pdf = pdf / pdf.sum()
-    print(pdf)
+
+    # print(pdf)
     plt.figure()
     plt.imshow(pdf, cmap=plt.cm.hot)
     plt.title("PDF")
@@ -160,15 +193,18 @@ for i in range(len(featLandmarks) + 1):
     
         cnt = np.zeros_like(pdf, dtype=np.int)
         for  k in range(Nk):
-            _f = subChosenFeatures[j, k]
-            a, b = _f[featIdx0], _f[featIdx1]
-            ia = int((a - bins0[0]) // gap0)
-            ib = int((b - bins1[0]) // gap1)
-            ia = ia - 1 if a >= bins0[-1] else ia
-            ib = ib - 1 if b >= bins1[-1] else ib
-            cnt[ia, ib] += 1
-        
-        k = ((cnt - Nk * pdf)**2 / (Nk * pdf + np.finfo(np.float).eps))
+            _seq = subChosenSequences[j, k]
+            cnt += speedAndAcceleratePdf(_seq, False).astype(np.int)
+
+            # a, b = _f[featIdx0], _f[featIdx1]
+            # ia = int((a - bins0[0]) // gap0)
+            # ib = int((b - bins1[0]) // gap1)
+            # ia = ia - 1 if a >= bins0[-1] else ia
+            # ib = ib - 1 if b >= bins1[-1] else ib
+            # cnt[ia, ib] += 1
+        # k = ((cnt - Nk * pdf)**2 / (Nk * pdf + np.finfo(np.float).eps))
+
+        k = (cnt - cnt.sum() * pdf)**2 / (cnt.sum() * pdf + np.finfo(np.float).eps)
         K += [k.sum()]
     K = np.array(K)
 
