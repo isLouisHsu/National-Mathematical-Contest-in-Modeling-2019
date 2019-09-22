@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 11:01:14
-@LastEditTime: 2019-09-22 10:34:21
+@LastEditTime: 2019-09-22 19:40:01
 @Update: 
 '''
 import os
@@ -201,7 +201,7 @@ gpsSpeedSeqs = []; gpsSpeedFeats = []
 for i in range(1, 4):
     
     # filename = 'data/temp.xlsx'
-    filename = 'data/file%d.xlsx' % i
+    filename = 'data/文件%d.xlsx' % i
     data = readData(filename)
     print(i)
     print("------------------")
