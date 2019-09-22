@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 21:22:41
-@LastEditTime: 2019-09-22 14:44:05
+@LastEditTime: 2019-09-22 17:43:12
 @Update: 
 '''
 # step 1
@@ -29,3 +29,6 @@ deleteClassIndex = [0, 3, 7]
 featLandmarks = [25, 55]
 totalTime  = 1300.
 sampleTime = 2000
+
+# step 5
+k = 16

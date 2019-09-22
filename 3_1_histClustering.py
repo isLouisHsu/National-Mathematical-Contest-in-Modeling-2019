@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-19 21:22:25
-@LastEditTime: 2019-09-22 13:03:42
+@LastEditTime: 2019-09-22 17:16:29
 @Update: 
 '''
 import os
@@ -50,21 +50,21 @@ plt.savefig("images/3_1_sequences_kmeans_cluster%d.png" % n_clusters)
 
 # ------------------------------------------------------------
 ## 查看峰值速度大于100的运动学片段样例
-t = 100
-index = features[:, 0] > t
-subseq = sequences[index]; subY = y[index]
-print("Number of sequences(>%d): " % t, subseq.shape[0])
-if subseq.shape[0] > 16:
-   subseq = subseq[:16]; subY = subY[:16]
-n_sequences = subseq.shape[0]
-nh = int(np.ceil(np.sqrt(n_sequences))); nw = n_sequences // nh + 1
-fig = plt.figure(figsize=(nw * 3, nh * 2))
-for i in range(n_sequences):
-    ax = fig.add_subplot(nw, nh, i // nh * nw + i % nh + 1)
-    if i < subseq.shape[0]:
-        ax.plot(subseq[i], label = 'class %d' % subY[i])
-    ax.legend()
-plt.savefig("images/3_1_maxSpeed_geq_%d_sequences_cluster%d.png" % (t, n_clusters))
+# t = 100
+# index = features[:, 0] > t
+# subseq = sequences[index]; subY = y[index]
+# print("Number of sequences(>%d): " % t, subseq.shape[0])
+# if subseq.shape[0] > 16:
+#    subseq = subseq[:16]; subY = subY[:16]
+# n_sequences = subseq.shape[0]
+# nh = int(np.ceil(np.sqrt(n_sequences))); nw = n_sequences // nh + 1
+# fig = plt.figure(figsize=(nw * 3, nh * 2))
+# for i in range(n_sequences):
+#     ax = fig.add_subplot(nw, nh, i // nh * nw + i % nh + 1)
+#     if i < subseq.shape[0]:
+#         ax.plot(subseq[i], label = 'class %d' % subY[i])
+#     ax.legend()
+# plt.savefig("images/3_1_maxSpeed_geq_%d_sequences_cluster%d.png" % (t, n_clusters))
 
 # ------------------------------------------------------------
 ## 构造统计量，统计其长度直方图、与各类别的长度直方图

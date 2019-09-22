@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-20 11:07:51
-@LastEditTime: 2019-09-22 17:03:24
+@LastEditTime: 2019-09-22 17:38:44
 @Update: 
 '''
 import os
@@ -14,6 +14,7 @@ import numpy as np
 from scipy import signal
 from matplotlib import mlab
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from sklearn.externals import joblib
 from sklearn.neighbors import KernelDensity
 
@@ -115,16 +116,29 @@ for i in range(len(featLandmarks) + 1):
     pdf = pdf / pdf.sum()
 
     # print(pdf)
-    plt.figure()
-    plt.imshow(pdf, cmap=plt.cm.hot)
-    plt.title("PDF")
-    plt.xlabel("max speed")
-    plt.ylabel("max accelerate")
-    plt.colorbar()
-    # plt.xticks(bins0, rotation=45)
-    # plt.yticks(bins1)
-    plt.savefig("images/4_2_1_pdf_%d.png" % i)
-    # plt.show()
+    # plt.figure()
+    # plt.imshow(pdf, cmap=plt.cm.hot)
+    # plt.title("PDF")
+    # plt.xlabel("max speed")
+    # plt.ylabel("max accelerate")
+    # plt.colorbar()
+    # # plt.xticks(bins0, rotation=45)
+    # # plt.yticks(bins1)
+    # plt.savefig("images/4_2_1_pdf_%d.png" % i)
+    # # plt.show()
+
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    X = [i - 4 for i in range(9)]
+    Y = [10 * (i + 1) for i in range(7)]
+    X, Y = np.meshgrid(X, Y)
+    surf = ax.plot_surface(X, Y, pdf, rstride=1, cstride=1, cmap=plt.cm.coolwarm)
+    ax.set_zlim(0., 1.0)
+    ax.set_xlabel('accelerate(m/s2)')
+    ax.set_ylabel('speed(km/h)')
+    ax.set_zlabel('joint probability distribution')
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    plt.savefig("images/4_2_1_speed_class_pdf_3d_%d.png" % i)
 
     # ---------------------------------------------------------------------------------
     ## 删除运行时长大于阈值的序列
@@ -159,9 +173,9 @@ for i in range(len(featLandmarks) + 1):
 
     ### 计算每个样本的采样概率 = 统计频率 x 长度的高斯分布
     p = np.zeros(subSequence.shape[0])
-    for i in range(n.shape[0]):
-        s, e = bins[i: i + 2]
-        p = np.where(np.bitwise_and(subFeature[:, 3] > s, subFeature[:, 3] < e), np.ones_like(p) * freq[i], p)
+    for j in range(n.shape[0]):
+        s, e = bins[j: j + 2]
+        p = np.where(np.bitwise_and(subFeature[:, 3] > s, subFeature[:, 3] < e), np.ones_like(p) * freq[j], p)
     _gauss = lambda x, mu, sigma: np.exp(- (x - mu)**2 / (2 * sigma**2)) / (2*np.pi*sigma**2)**0.5
     gp = _gauss(subFeature[:, 3], Tk, 150)
     p *= gp
@@ -212,6 +226,8 @@ for i in range(len(featLandmarks) + 1):
     K = K[index]
     subChosenSequences = subChosenSequences[index]
     subChosenFeatures  = subChosenFeatures[index]
+
+    np.savetxt("output/4_2_1_kafang_scores_speed_class_%d.txt" % i, K)
     
     ## 选择卡方值最小的
     n_seq = subChosenSequences.shape[0]

@@ -6,7 +6,7 @@
 @Github: https://github.com/isLouisHsu
 @E-mail: is.louishsu@foxmail.com
 @Date: 2019-09-22 14:29:48
-@LastEditTime: 2019-09-22 17:08:02
+@LastEditTime: 2019-09-22 17:42:42
 @Update: 
 '''
 import os
@@ -17,7 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy import signal
 from sklearn.externals import joblib
 
-from params import n_components_default, n_clusters_default, deleteClassIndex
+from params import n_components_default, n_clusters_default, deleteClassIndex, k
 
 def calFeature(seq):
     """
@@ -65,7 +65,6 @@ def calFeature(seq):
     # 减速度标准差
     feature += [_acc.std()]
 
-    print(feature)
     return feature
 
 def evalSpeedAndAccelerate(seq):
@@ -96,10 +95,9 @@ def evalSpeedAndAccelerate(seq):
     return pdf
 
 # ------------------------------------------------------------------------
-k = 5
 speedSeq = np.load("output/4_2_2_combineSequences_%d.npy" % k)
 speedSeq = np.concatenate(speedSeq)
-calFeature(speedSeq)
+featOutput = calFeature(speedSeq)
 
 # ------------------------------------------------------------------------
 sequences = np.load('output/1_gpsSpeedSequences.npy')
@@ -120,8 +118,10 @@ for idx in deleteClassIndex:
     index = np.bitwise_and(index, idx)
 sequences = sequences[index]
 features  = features [index]
+featOrigin = calFeature(np.concatenate(sequences))
 
-calFeature(np.concatenate(sequences))
+np.savetxt("output/5_1_featOutput_%d.txt" % k, featOutput)
+np.savetxt("output/5_1_featOrigin_%d.txt" % k, featOrigin)
 
 # ========================================================================
 pdfOrigin = evalSpeedAndAccelerate(np.concatenate(sequences))
@@ -129,7 +129,7 @@ pdfOutput = evalSpeedAndAccelerate(speedSeq)
 pdfError  = np.abs(pdfOrigin - pdfOutput)
 # print(pdfOrigin); print(pdfOutput); print(pdfError)
 
-print(pdfError.max())
+np.savetxt("output/5_1_pdfError_max_%d.txt" % k, [pdfError.max()])
 
 X = [i - 4 for i in range(9)]
 Y = [10 * (i + 1) for i in range(7)]
@@ -144,7 +144,7 @@ ax.set_xlabel('accelerate(m/s2)')
 ax.set_ylabel('speed(km/h)')
 ax.set_zlabel('joint probability distribution')
 fig.colorbar(surf, shrink=0.5, aspect=5)
-plt.savefig("images/5_1_orgin_pdf_3d.png")
+plt.savefig("images/5_1_orgin_pdf_3d_%d.png" % k)
 
 fig = plt.figure()
 # plt.title("合成序列速度(km/h)与加速度(m/s2)联合分布")
@@ -155,7 +155,7 @@ ax.set_xlabel('accelerate(m/s2)')
 ax.set_ylabel('speed(km/h)')
 ax.set_zlabel('joint probability distribution')
 fig.colorbar(surf, shrink=0.5, aspect=5)
-plt.savefig("images/5_1_output_pdf_3d.png")
+plt.savefig("images/5_1_output_pdf_3d_%d.png" % k)
 
 fig = plt.figure()
 # plt.title("联合分布差异")
@@ -166,6 +166,6 @@ ax.set_xlabel('accelerate(m/s2)')
 ax.set_ylabel('speed(km/h)')
 ax.set_zlabel('joint probability distribution')
 fig.colorbar(surf, shrink=0.5, aspect=5)
-plt.savefig("images/5_1_error_pdf_3d.png")
+plt.savefig("images/5_1_error_pdf_3d_%d.png" % k)
 
-plt.show()
+# plt.show()
